@@ -7,7 +7,7 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-boto3 = "^1.21.10"
+boto3 = "^1.21.11"
 Pillow = "^9.0.1"
 fastapi = "^0.74.1"
 uvicorn = "^0.17.5"
