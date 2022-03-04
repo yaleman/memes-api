@@ -231,7 +231,7 @@ async def healthcheck() -> HTMLResponse:
     return HTMLResponse("OK")
 
 @app.get("/")
-async def root() -> HTMLResponse: # pylint: disable=invalid-name
+async def home_page() -> HTMLResponse: # pylint: disable=invalid-name
     """ homepage """
     indexfile = Path(f"{os.path.dirname(__file__)}/index.html")
     if not indexfile.exists():
