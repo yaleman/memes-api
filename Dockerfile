@@ -13,4 +13,4 @@ RUN poetry install
 COPY ./memes_api/ /code/memes_api/
 
 #
-CMD ["poetry", "run", "python", "-m", "memes_api", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["poetry", "run", "python", "-m", "memes_api", "--proxy-headers", "--host", "0.0.0.0", "--port", "8000"]

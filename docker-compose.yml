@@ -12,7 +12,7 @@ services:
       timeout: 1s
       retries: 5
     image: ghcr.io/yaleman/memes-api:latest
-    command: ["poetry", "run", "python", "-m", "memes_api", "--host", "0.0.0.0", "--port", "11707"]
+    command: ["poetry", "run", "python", "-m", "memes_api", "--host", "0.0.0.0", "--port", "11707", "--proxy-headers"]
     labels:
       com.centurylinklabs.watchtower.enable: true
     ports:
