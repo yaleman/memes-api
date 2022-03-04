@@ -32,30 +32,15 @@
   <title>memes</title>
 </head>
 <body>
-
+    {% include "navbar.html" %}
 
     <main id="memes">
     <nav>
 
     </nav>
-    <div class="container">
-    <!-- <section class="pb-4"> -->
-    <div class="row">
-    <!-- <div class="d-flex flex-row bd-highlight mb-3"> -->
-        <template v-for="image in images">
-        <div class="col-lg-2 mb-2 mb-lg-0">
-            <figure class="figure">
-            <a :href="'/image_info/'+image" >
-            <img :src="'/thumbnail/'+image" :title=image :alt=image class="img-thumbnail img-fluid rounded"/>
-            </a>
-            </figure>
-        </div>
-        </template>
-    </div>
 
-
-
-</div>
+    {% block content %}
+    {% endblock content %}
     </main>
     <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>

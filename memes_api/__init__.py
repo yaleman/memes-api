@@ -233,10 +233,19 @@ async def healthcheck() -> HTMLResponse:
 @app.get("/")
 async def home_page() -> HTMLResponse: # pylint: disable=invalid-name
     """ homepage """
-    indexfile = Path(f"{os.path.dirname(__file__)}/index.html")
-    if not indexfile.exists():
-        print("Couldn't find index file!")
-        return HTMLResponse(content="File Not Found", status_code=404)
-    content = indexfile.read_text(encoding="utf8")
+    jinja2_env = Environment(
+        loader=PackageLoader(package_name="memes_api", package_path="./templates"),
+        autoescape=select_autoescape(),
+    )
+    try:
+        template = jinja2_env.get_template("index.html")
 
-    return HTMLResponse(content)
+        context: dict = {
+            "baseurl" : CONFIG.baseurl,
+        }
+        new_filecontents = template.render(**context)
+        return HTMLResponse(new_filecontents)
+
+    except jinja2.exceptions.TemplateNotFound as template_error:
+        print(f"Failed to load template: {template_error}", file=sys.stderr)
+    return HTMLResponse("Something went wrong, sorry.", status_code=500)
