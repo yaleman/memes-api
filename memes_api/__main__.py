@@ -19,13 +19,16 @@ def cli(
     """  server """
     print(f"{proxy_headers=}", file=sys.stderr)
     print(f"{reload=}", file=sys.stderr)
-    uvicorn.run(
-        app="memes_api:app",
-        reload=reload,
-        host=host,
-        port=port,
-        proxy_headers=proxy_headers,
-        )
+    uvicorn_args = {
+        "app":"memes_api:app",
+        "reload":reload,
+        "host":host,
+        "port":port,
+        "proxy_headers":proxy_headers,
+    }
+    if proxy_headers:
+        uvicorn_args["forwarded_allow_ips"]='*'
+    uvicorn.run(**uvicorn_args)
 
 if __name__ == '__main__':
     cli()
