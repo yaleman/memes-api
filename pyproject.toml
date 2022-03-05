@@ -26,3 +26,10 @@ boto3-stubs = "^1.21.11"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[project.scripts]
+"memes-api" = 'memes_api.__main__:cli'
+"memes-healthcheck" = 'memes_api.healthcheck:cli'
+[tool.poetry.scripts]
+'memes-api' = 'memes_api.__main__:cli'
+"memes-healthcheck" = 'memes_api.healthcheck:cli'

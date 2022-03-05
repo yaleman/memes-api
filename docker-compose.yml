@@ -4,10 +4,9 @@ version: '3.8'
 services:
   memes:
     build: .
+    container_name: memes_api
     healthcheck:
-      test: ["CMD", "curl",
-        "http://127.0.0.1:11707/up",
-        ]
+      test: ["CMD", "poetry", "run", "memes-healthcheck", "http://127.0.0.1:11707/up"]
       interval: 60s
       timeout: 1s
       retries: 5
