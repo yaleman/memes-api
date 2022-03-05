@@ -6,12 +6,12 @@ services:
     build: .
     container_name: memes_api
     healthcheck:
-      test: ["CMD", "poetry", "run", "memes-healthcheck", "http://127.0.0.1:11707/up"]
+      test: ["CMD", "memes-healthcheck", "http://127.0.0.1:11707/up"]
       interval: 60s
       timeout: 1s
       retries: 5
     image: ghcr.io/yaleman/memes-api:latest
-    command: ["poetry", "run", "python", "-m", "memes_api", "--host", "0.0.0.0", "--port", "11707", "--proxy-headers"]
+    command: ["memes-api", "--host", "0.0.0.0", "--port", "11707", "--proxy-headers"]
     labels:
       com.centurylinklabs.watchtower.enable: true
     ports:
