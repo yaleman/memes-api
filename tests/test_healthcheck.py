@@ -8,6 +8,7 @@ client = TestClient(app)
 
 def test_healthcheck():
     """tests the healthcheck works"""
-    response = client.get("/up")
-    assert response.status_code == 200
-    assert response.content == b"OK"
+    for _ in range(100):
+        response = client.get("/up")
+        assert response.status_code == 200
+        assert response.content == b"OK"

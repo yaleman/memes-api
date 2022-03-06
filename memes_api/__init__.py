@@ -1,5 +1,6 @@
 """ Memes API """
 
+from functools import lru_cache
 from hashlib import sha1
 from io import BytesIO
 import json
@@ -30,7 +31,8 @@ class MemeConfig(BaseModel):
     baseurl: str
     endpoint_url: Optional[str]
 
-async def meme_config_load(filepath: Optional[Path]=None) -> MemeConfig:
+@lru_cache()
+def meme_config_load(filepath: Optional[Path]=None) -> MemeConfig:
     """ config loader, returns a pydantic object, will try ~/.config/memes-api.json, memes-api.json, /etc/memes-api.json in order, returning the result of parsing the first one found. """
     if filepath is not None:
         if filepath.exists():
@@ -116,16 +118,14 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 @app.get("/allimages")
 async def all_images():
     """ returns all the images """
-    config = await meme_config_load()
-    bucket = MemeBucket(config)
+    bucket = MemeBucket(meme_config_load())
     return { "images" : [ image.key for image in bucket.objects ]}
 
 @app.get("/thumbnail/{filename}")
 async def get_thumbnail(filename: str):
     """ returns an image thumbnailed """
 
-    config = await meme_config_load()
-    image_class = MemeImage(config)
+    image_class = MemeImage(meme_config_load())
     image = image_class.get(filename)
 
     if image is None:
@@ -168,9 +168,9 @@ async def get_image_info(filename: str):
     )
     try:
         template = jinja2_env.get_template("view_image.html")
-        config = await meme_config_load()
+
         context: dict = {
-            "baseurl" : config.baseurl,
+            "baseurl" : meme_config_load().baseurl,
             "image" : filename
         }
         new_filecontents = template.render(**context)
@@ -183,8 +183,7 @@ async def get_image_info(filename: str):
 @app.get("/image/{filename}")
 async def get_image(filename: str):
     """ returns an image """
-    config = await meme_config_load()
-    image_class = MemeImage(config)
+    image_class = MemeImage(meme_config_load())
     image = image_class.get(filename)
 
     if image is None:
@@ -245,9 +244,8 @@ async def home_page() -> HTMLResponse: # pylint: disable=invalid-name
     )
     try:
         template = jinja2_env.get_template("index.html")
-        config = await meme_config_load()
         context: dict = {
-            "baseurl" : config.baseurl,
+            "baseurl" : meme_config_load().baseurl,
         }
         new_filecontents = template.render(**context)
         return HTMLResponse(new_filecontents)
