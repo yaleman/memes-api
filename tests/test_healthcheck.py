@@ -6,7 +6,6 @@ from memes_api import app
 
 client = TestClient(app)
 
-
 def test_healthcheck():
     """tests the healthcheck works"""
     response = client.get("/up")

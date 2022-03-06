@@ -30,16 +30,21 @@ class MemeConfig(BaseModel):
     baseurl: str
     endpoint_url: Optional[str]
 
-def meme_config_load(filepath: Optional[Path]=None) -> MemeConfig:
-    """ config loader, returns a pydantic object """
+async def meme_config_load(filepath: Optional[Path]=None) -> MemeConfig:
+    """ config loader, returns a pydantic object, will try ~/.config/memes-api.json, memes-api.json, /etc/memes-api.json in order, returning the result of parsing the first one found. """
     if filepath is not None:
         if filepath.exists():
             return MemeConfig.parse_file(filepath.expanduser().resolve())
         raise FileNotFoundError(f"Couldn't find {filepath}")
-    filepath = Path("~/.config/memes-api.json").expanduser().resolve()
-    if not filepath.exists():
-        raise FileNotFoundError(f"Couldn't find {filepath}")
-    return MemeConfig.parse_file(filepath.expanduser().resolve())
+    for testpath in [
+        "~/.config/memes-api.json",
+        "memes-api.json",
+        "/etc/memes-api.json",
+    ]:
+        filepath = Path(testpath).expanduser().resolve()
+        if filepath.exists():
+            return MemeConfig.parse_file(filepath.expanduser().resolve())
+    raise FileNotFoundError(f"Couldn't find {filepath}")
 
 class MemeBucket:
     """ handles s3 things """
@@ -100,7 +105,6 @@ class MemeImage:
             return None
 
 
-CONFIG: MemeConfig = meme_config_load()
 IMAGES_BASEDIR = Path(f"{os.path.dirname(__file__)}/images/").resolve().as_posix()
 JS_BASEDIR = Path(f"{os.path.dirname(__file__)}/js/").resolve().as_posix()
 
@@ -112,14 +116,16 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 @app.get("/allimages")
 async def all_images():
     """ returns all the images """
-    bucket = MemeBucket(CONFIG)
+    config = await meme_config_load()
+    bucket = MemeBucket(config)
     return { "images" : [ image.key for image in bucket.objects ]}
 
 @app.get("/thumbnail/{filename}")
 async def get_thumbnail(filename: str):
     """ returns an image thumbnailed """
 
-    image_class = MemeImage(CONFIG)
+    config = await meme_config_load()
+    image_class = MemeImage(config)
     image = image_class.get(filename)
 
     if image is None:
@@ -162,9 +168,9 @@ async def get_image_info(filename: str):
     )
     try:
         template = jinja2_env.get_template("view_image.html")
-
+        config = await meme_config_load()
         context: dict = {
-            "baseurl" : CONFIG.baseurl,
+            "baseurl" : config.baseurl,
             "image" : filename
         }
         new_filecontents = template.render(**context)
@@ -177,8 +183,8 @@ async def get_image_info(filename: str):
 @app.get("/image/{filename}")
 async def get_image(filename: str):
     """ returns an image """
-
-    image_class = MemeImage(CONFIG)
+    config = await meme_config_load()
+    image_class = MemeImage(config)
     image = image_class.get(filename)
 
     if image is None:
@@ -239,9 +245,9 @@ async def home_page() -> HTMLResponse: # pylint: disable=invalid-name
     )
     try:
         template = jinja2_env.get_template("index.html")
-
+        config = await meme_config_load()
         context: dict = {
-            "baseurl" : CONFIG.baseurl,
+            "baseurl" : config.baseurl,
         }
         new_filecontents = template.render(**context)
         return HTMLResponse(new_filecontents)
