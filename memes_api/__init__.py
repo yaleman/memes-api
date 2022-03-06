@@ -245,6 +245,7 @@ async def home_page() -> HTMLResponse: # pylint: disable=invalid-name
     try:
         template = jinja2_env.get_template("index.html")
         context: dict = {
+            "enable_search" : True,
             "baseurl" : meme_config_load().baseurl,
         }
         new_filecontents = template.render(**context)
