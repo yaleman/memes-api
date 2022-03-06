@@ -1,0 +1,8 @@
+{
+    "aws_access_key_id" : "test",
+    "aws_secret_access_key" : "test",
+    "aws_region" : "test",
+    "bucket" : "test",
+    "endpoint_url" : "http://example.com",
+    "baseurl" : "http://example.com"
+ }

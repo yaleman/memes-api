@@ -22,4 +22,6 @@ jobs:
           python --version
           python -m pip install --quiet --no-cache-dir --upgrade poetry
           poetry install
+          cp tests/test_config.json ./memes-api.json
           poetry run python -m pytest
+
