@@ -6,9 +6,9 @@
         Memes!</a>
       {% if enable_search %}
       <div class=" .align-self-end" id="navbarCollapse">
-        <form class="d-flex">
-          <input class="form-control me-2" type="search" id="search_box" v-model="search_box" placeholder="Search" aria-label="Search">
-          <button class="btn btn-outline-light" @click="resetform">X</button>
+        <form class="d-flex" action="/">
+          <input class="form-control me-2" type="search" id="search" name="q" v-model="search" placeholder="Search" aria-label="Search">
+          <!-- <button class="btn btn-outline-light" @click="resetform">X</button> -->
         </form>
       </div>
         {% endif %}

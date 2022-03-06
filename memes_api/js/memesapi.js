@@ -1,17 +1,24 @@
-var memes = new Vue({
+
+const app = Vue.createApp({
     delimiters: ['|', '|'], // because we use jinja2 for templating
-    el: '#memes',
-    data: {
+    data: function(){
+        return {
         images : [],
-        search_box: '',
+        search: '',
+        }
     },
     created () {
+        let qp = new URLSearchParams(window.location.search);
+        if (qp.get("search") != "" && qp.get("q") != null ) {
+            this.search = qp.get("q");
+        }
         this.getImages();
     },
     computed: {
         filteredImages() {
+
             return this.images.filter(image =>{
-                const searchTerm = this.search_box.toLowerCase();
+                const searchTerm = this.search.toLowerCase();
                 if (searchTerm == ""){
                     return true
                 }
@@ -42,8 +49,22 @@ var memes = new Vue({
             });
         },
         resetform: function() {
-            this.search_box = "";
+            this.search = "";
+        },
+        updateUrl() {
+            let qp = new URLSearchParams();
+            if(this.search !== '') {
+                qp.set('q', this.search);
+            } else {
+                qp.set("q", "");
+            }
+            history.replaceState(null, null, "?"+qp.toString());
         }
     },
-  })
-
+    watch: {
+        search() {
+            this.updateUrl();
+        }
+    },
+});
+app.mount('#memes');
