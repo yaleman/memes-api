@@ -75,7 +75,7 @@ class MemeBucket:
     @property
     def objects(self) -> Generator[Any,None,None]:
         """ returns the objects iterator """
-        iterator: Generator[Any,None,None] = self.bucket.list_objects()
+        iterator: Generator[Any,None,None] = self.bucket.objects.iterator()
         return iterator
 
 # pylint: disable=too-few-public-methods
