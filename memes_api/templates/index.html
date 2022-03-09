@@ -1,18 +1,17 @@
 {% extends "basetemplate.html" %}
 
 {% block content %}
-<div class="container">
-    <div class="row">
-        <template v-for="image in filteredImages" :key="image">
-        <div class="col-lg-2 mb-2 mb-lg-0">
-            <figure class="figure">
-            <a :href="'/image_info/'+image" >
-            <img :src="'/thumbnail/'+image" :title=image :alt=image class="img-thumbnail img-fluid rounded"/>
-            </a>
-            </figure>
+
+<!-- <div class="d-flex-inline align-items-start flex-column mb-0 p-0"> -->
+    <template v-for="image in filteredImages" :key="image">
+    <a :href="'/image_info/'+image" >
+        <div class="imagebox">
+            <img :src="'/thumbnail/'+image" :title=image :alt=image class="imagebox"/>
         </div>
-        </template>
-    </div>
+    </a>
+    </template>
+
+<div class="container">
 
     <div class="row">
         <div class="col">

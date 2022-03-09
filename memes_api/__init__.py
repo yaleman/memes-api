@@ -6,12 +6,13 @@ from io import BytesIO
 import json
 import os.path
 from pathlib import Path
-from typing import Optional, Union
+from typing import Any, Dict, Generator, List, Optional, Union
 import sys
 
 from PIL import Image
 
 import boto3
+
 from botocore.exceptions import ClientError
 from pydantic import BaseModel
 
@@ -48,6 +49,7 @@ def meme_config_load(filepath: Optional[Path]=None) -> MemeConfig:
             return MemeConfig.parse_file(filepath.expanduser().resolve())
     raise FileNotFoundError(f"Couldn't find {filepath}")
 
+# pylint: disable=too-few-public-methods
 class MemeBucket:
     """ handles s3 things """
     def __init__(self, meme_config: MemeConfig):
@@ -71,10 +73,12 @@ class MemeBucket:
         self.bucket = self.s3_resource.Bucket(meme_config.bucket)
 
     @property
-    def objects(self):
+    def objects(self) -> Generator[Any,None,None]:
         """ returns the objects iterator """
-        return self.bucket.objects.iterator()
+        iterator: Generator[Any,None,None] = self.bucket.list_objects()
+        return iterator
 
+# pylint: disable=too-few-public-methods
 class MemeImage:
     """ gets an object """
     def __init__(self, meme_config: MemeConfig):
@@ -99,14 +103,16 @@ class MemeImage:
     def get(self, filename: str) -> Optional[bytes]:
         """ gets an image"""
         try:
-
             image = self.s3_resource.Object(self.bucket, filename)
-            return image.get().get("Body")
+            if "Body" in image.get():
+                body: bytes = image.get()["Body"]
+                return body
         except ClientError as error_message:
             print(f"ClientError pulling {filename}: {error_message}", file=sys.stderr)
-            return None
+        return None
 
 
+CSS_BASEDIR = Path(f"{os.path.dirname(__file__)}/css/").resolve().as_posix()
 IMAGES_BASEDIR = Path(f"{os.path.dirname(__file__)}/images/").resolve().as_posix()
 JS_BASEDIR = Path(f"{os.path.dirname(__file__)}/js/").resolve().as_posix()
 
@@ -116,13 +122,13 @@ app = FastAPI()
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 @app.get("/allimages")
-async def all_images():
+async def all_images() -> Dict[str, List[str]]:
     """ returns all the images """
     bucket = MemeBucket(meme_config_load())
     return { "images" : [ image.key for image in bucket.objects ]}
 
 @app.get("/thumbnail/{filename}")
-async def get_thumbnail(filename: str):
+async def get_thumbnail(filename: str) -> Union[HTMLResponse,StreamingResponse]:
     """ returns an image thumbnailed """
 
     image_class = MemeImage(meme_config_load())
@@ -137,7 +143,7 @@ async def get_thumbnail(filename: str):
         tempimage.thumbnail(THUMBNAIL_DIMENSIONS)
         # tempimage = tempimage.resize(THUMBNAIL_DIMENSIONS).convert('RGB')
         tempimage = tempimage.convert('RGB')
-        expanded = Image.new(tempimage.mode, THUMBNAIL_DIMENSIONS, bgcolour)
+        expanded = Image.new('RGB', THUMBNAIL_DIMENSIONS, bgcolour)
 
         paste_x = 0
         paste_y = 0
@@ -160,7 +166,7 @@ async def get_thumbnail(filename: str):
     return StreamingResponse(content=tmpstorage, media_type="image/jpeg", headers=headers)
 
 @app.get("/image_info/{filename}")
-async def get_image_info(filename: str):
+async def get_image_info(filename: str) -> HTMLResponse:
     """ gets the image info page """
     jinja2_env = Environment(
         loader=PackageLoader(package_name="memes_api", package_path="./templates"),
@@ -169,19 +175,21 @@ async def get_image_info(filename: str):
     try:
         template = jinja2_env.get_template("view_image.html")
 
-        context: dict = {
+
+        context: Dict[str,Any] = {
             "baseurl" : meme_config_load().baseurl,
-            "image" : filename
+            "image" : filename,
+            "og_image" : f"{meme_config_load().baseurl}/image/{filename.replace(' ', '%20')}",
         }
         new_filecontents = template.render(**context)
         return HTMLResponse(new_filecontents)
 
     except jinja2.exceptions.TemplateNotFound as template_error:
         print(f"Failed to load template: {template_error}", file=sys.stderr)
-    return None
+    return HTMLResponse("Failed to render page, sorry!", status_code=500)
 
 @app.get("/image/{filename}")
-async def get_image(filename: str):
+async def get_image(filename: str) -> Union[HTMLResponse,StreamingResponse]:
     """ returns an image """
     image_class = MemeImage(meme_config_load())
     image = image_class.get(filename)
@@ -205,6 +213,21 @@ async def jsfile(filename: str) -> Union[FileResponse, HTMLResponse]:
             "original_path" : filename,
             "resolved_path" : filepath.as_posix()
         }))
+        return HTMLResponse(status_code=403)
+    return FileResponse(filepath.as_posix())
+
+@app.get("/static/css/{filename}")
+async def css_get(filename: str) -> Union[FileResponse, HTMLResponse]:
+    """ return the css file """
+    filepath = Path(f"{os.path.dirname(__file__)}/css/{filename}").resolve()
+    if not filepath.resolve().is_file() or not filepath.exists():
+        return HTMLResponse(status_code=404)
+    if CSS_BASEDIR not in filepath.resolve().as_posix():
+        print(json.dumps({
+            "action" : "attempt_outside_css_dir",
+            "original_path" : filename,
+            "resolved_path" : filepath.resolve()
+        }, default=str))
         return HTMLResponse(status_code=403)
     return FileResponse(filepath.as_posix())
 
@@ -244,7 +267,7 @@ async def home_page() -> HTMLResponse: # pylint: disable=invalid-name
     )
     try:
         template = jinja2_env.get_template("index.html")
-        context: dict = {
+        context: Dict[str,Union[bool, str]] = {
             "enable_search" : True,
             "baseurl" : meme_config_load().baseurl,
         }

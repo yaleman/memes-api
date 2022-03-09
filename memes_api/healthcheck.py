@@ -11,11 +11,11 @@ DEFAULT_URL = "http://localhost:11707/up"
 
 @click.command()
 @click.argument("url", default=DEFAULT_URL)
-def cli(url: str=DEFAULT_URL):
+def cli(url: str=DEFAULT_URL) -> None:
     """ Checks the URL works """
     try:
-        with urllib.request.urlopen(url) as f:
-            result = f.read().decode('utf-8')
+        with urllib.request.urlopen(url) as response:
+            result = response.read().decode('utf-8')
             if result == "OK":
                 print("OK")
                 sys.exit(0)

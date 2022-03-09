@@ -1,0 +1,15 @@
+
+.container {
+  padding: 5.0em 1.0em 0;
+}
+
+div.imagebox{
+    width: 205px;
+    height: 205px;
+    display: inline-flex;
+    justify-content: center;
+    padding: 0px;
+    border: 0.5px solid grey;
+    text-align: center;
+    background-image: url("/static/images/thumbnail_background.svg");
+}

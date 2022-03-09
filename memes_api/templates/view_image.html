@@ -1,29 +1,43 @@
 {% extends "basetemplate.html" %}
 
 {% block content %}
-<div class="container">
-    <div class="row">
-        <div class="col">
-        <h3>{{image}}</h3>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col form-group">
-        <label for="direct_link">Direct Link</label>
-        <input type="text"  class="form-control" id="direct_link" value="{{baseurl}}/image/{{image|replace(" ","%20")}}" disabled="true"/>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col">
-        <label for="markdown_big">Markdown full size</label>
-        <input type="text" id="markdown_big"  class="form-control" value="![]({{baseurl}}/image/{{image|replace(" ","%20")}})" disabled="true"/>
-        </div>
-    </div>
     <div class="row">
         <div class="col">
             <br />
         <img alt="{{image}}" title="{{image}}" src="{{baseurl}}/image/{{image|replace(" ","%20")}}" />
         </div>
     </div>
-</div>
+    <div class="row">
+        <div class="col"><h3>{{image}}</h3></div>
+    </div>
+    <div class="row">
+        <div class="col form-group"><label for="direct_link">Direct Link</label></div>
+    </div>
+    <div class="row">
+        <div class="col form-group">
+        <input type="text"
+            class="form-control"
+            id="direct_link"
+            ref="direct_link"
+            value="{{og_image}}"
+            disabled="true"
+            v-on:focus="$event.target.select()"
+            />
+        </div>
+
+        <div class="col-auto form-group"><button @click="copy_direct" class="form-control">Copy</button></div>
+    </div>
+    <div class="row">
+        <div class="col form-group"><label for="markdown_big">Markdown full size</label></div>
+    </div>
+    <div class="row">
+        <div class="col form-group">
+            <input
+                type="text"
+                id="markdown_big"
+                ref="md_link"
+                class="form-control" value="![]({{og_image}})" disabled="true"/>
+        </div>
+        <div class="col-auto form-group"><button @click="copy_md" class="form-control">Copy</button></div>
+    </div>
 {% endblock content %}

@@ -59,6 +59,29 @@ const app = Vue.createApp({
                 qp.set("q", "");
             }
             history.replaceState(null, null, "?"+qp.toString());
+        },
+        copy_direct() {
+            /* clipboard copy example from https://www.w3schools.com/howto/howto_js_copy_clipboard.asp */
+            this.$refs.direct_link.focus();
+
+            /* Select the text field */
+            this.$refs.direct_link.select();
+            this.$refs.direct_link.setSelectionRange(0, 99999); /* For mobile devices */
+
+            /* Copy the text inside the text field */
+            navigator.clipboard.writeText(this.$refs.direct_link.value);
+
+        },
+        copy_md() {
+            /* clipboard copy example from https://www.w3schools.com/howto/howto_js_copy_clipboard.asp */
+            this.$refs.md_link.focus();
+
+            /* Select the text field */
+            this.$refs.md_link.select();
+            this.$refs.md_link.setSelectionRange(0, 99999); /* For mobile devices */
+
+            /* Copy the text inside the text field */
+            navigator.clipboard.writeText(this.$refs.md_link.value);
         }
     },
     watch: {
@@ -67,4 +90,7 @@ const app = Vue.createApp({
         }
     },
 });
+
+
 app.mount('#memes');
+
