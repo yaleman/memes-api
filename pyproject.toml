@@ -22,7 +22,7 @@ pytest = "^7.0.1"
 mypy = "^0.931"
 black = "^22.1.0"
 pylint-pydantic = "^0.1.4"
-boto3-stubs = "^1.21.16"
+boto3-stubs = "^1.21.17"
 requests = "^2.27.1"
 
 [build-system]
