@@ -1,22 +1,31 @@
+const imagesPerPage = 15;
 
 const app = Vue.createApp({
+    components: {
+      paginate: VuejsPaginateNext,
+    },
     delimiters: ['|', '|'], // because we use jinja2 for templating
+
     data: function(){
         return {
         images : [],
         search: '',
+        currentPage: 1 // default to the first page
         }
     },
     created () {
+        // parse the URL and set search and pagination
         let qp = new URLSearchParams(window.location.search);
-        if (qp.get("search") != "" && qp.get("q") != null ) {
+        if (qp.get("q") != "" && qp.get("q") != null ) {
             this.search = qp.get("q");
+        }
+        if (qp.get("p") != "" && qp.get("p") != null ) {
+            this.currentPage = Number(qp.get("p"));
         }
         this.getImages();
     },
     computed: {
         filteredImages() {
-
             return this.images.filter(image =>{
                 const searchTerm = this.search.toLowerCase();
                 if (searchTerm == ""){
@@ -33,14 +42,26 @@ const app = Vue.createApp({
 
             })
         },
+        paginatedImages() {
+            let start = (this.currentPage-1) * imagesPerPage;
+            let end =   ((this.currentPage-1) * imagesPerPage) + imagesPerPage
+            return this.filteredImages.slice(start, end);
+        },
         count_filteredImages() {
             return this.filteredImages.length;
         },
         totalImages() {
             return this.images.length;
+        },
+        pageCount() {
+            return Math.round(this.filteredImages.length / imagesPerPage,0);
         }
     },
     methods: {
+        clickCallback: function(pageNum) {
+            this.currentPage = pageNum;
+            this.updateUrl();
+        },
         getImages: function() {
             axios.get(
                 "/allimages",
@@ -57,6 +78,11 @@ const app = Vue.createApp({
                 qp.set('q', this.search);
             } else {
                 qp.set("q", "");
+            }
+            if(this.currentPage > 0) {
+                qp.set('p', this.currentPage);
+            } else {
+                qp.set("p", "");
             }
             history.replaceState(null, null, "?"+qp.toString());
         },

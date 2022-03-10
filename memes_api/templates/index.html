@@ -2,14 +2,25 @@
 
 {% block content %}
 
-<!-- <div class="d-flex-inline align-items-start flex-column mb-0 p-0"> -->
-    <template v-for="image in filteredImages" :key="image">
+    <template v-for="image in paginatedImages" :key="image">
     <a :href="'/image_info/'+image" >
         <div class="imagebox">
             <img :src="'/thumbnail/'+image" :title=image :alt=image class="imagebox"/>
         </div>
     </a>
     </template>
+
+    <div id="app">
+        <paginate
+          :page-count="pageCount"
+          :container-class="'pagination'"
+          :prev-text="'<<'"
+          :next-text="'>>'"
+          :initial-page="currentPage"
+          :click-handler="clickCallback"
+        >
+        </paginate>
+      </div>
 
 <div class="container">
 
@@ -19,4 +30,5 @@
         </div>
     </div>
 </div>
+
 {% endblock content %}
