@@ -49,6 +49,18 @@ def meme_config_load(filepath: Optional[Path]=None) -> MemeConfig:
             return MemeConfig.parse_file(filepath.expanduser().resolve())
     raise FileNotFoundError(f"Couldn't find {filepath}")
 
+@lru_cache()
+def default_context() -> Dict[str, Union[str,bool]]:
+    """ returns a default context object """
+    return {
+        "page_title" : "Memes!",
+        "page_description" : "Sharing dem memes.",
+        "enable_search" : False,
+        "baseurl" : meme_config_load().baseurl,
+    }
+
+
+
 # pylint: disable=too-few-public-methods
 class MemeBucket:
     """ handles s3 things """
@@ -175,12 +187,10 @@ async def get_image_info(filename: str) -> HTMLResponse:
     try:
         template = jinja2_env.get_template("view_image.html")
 
-
-        context: Dict[str,Any] = {
-            "baseurl" : meme_config_load().baseurl,
-            "image" : filename,
-            "og_image" : f"{meme_config_load().baseurl}/image/{filename.replace(' ', '%20')}",
-        }
+        context = default_context()
+        context["image"] = filename
+        context["og_image"] = f"{context['baseurl']}/image/{filename.replace(' ', '%20')}"
+        context["page_title"] = f"Memes! - {filename}"
         new_filecontents = template.render(**context)
         return HTMLResponse(new_filecontents)
 
@@ -267,10 +277,8 @@ async def home_page() -> HTMLResponse: # pylint: disable=invalid-name
     )
     try:
         template = jinja2_env.get_template("index.html")
-        context: Dict[str,Union[bool, str]] = {
-            "enable_search" : True,
-            "baseurl" : meme_config_load().baseurl,
-        }
+        context = default_context()
+        context["enable_search"] = True
         new_filecontents = template.render(**context)
         return HTMLResponse(new_filecontents)
 
