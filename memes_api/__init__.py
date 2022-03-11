@@ -16,13 +16,12 @@ import boto3
 from botocore.exceptions import ClientError
 from pydantic import BaseModel
 
-
-
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from jinja2 import Environment, PackageLoader, select_autoescape
 import jinja2.exceptions
+
 class MemeConfig(BaseModel):
     """ config file """
     aws_access_key_id : str
@@ -58,8 +57,6 @@ def default_context() -> Dict[str, Union[str,bool]]:
         "enable_search" : False,
         "baseurl" : meme_config_load().baseurl,
     }
-
-
 
 # pylint: disable=too-few-public-methods
 class MemeBucket:

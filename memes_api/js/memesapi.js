@@ -54,7 +54,7 @@ const app = Vue.createApp({
             return this.images.length;
         },
         pageCount() {
-            return Math.round(this.filteredImages.length / imagesPerPage,0);
+            return (Math.round(this.filteredImages.length / imagesPerPage,0))+1;
         }
     },
     methods: {
