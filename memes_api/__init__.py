@@ -216,8 +216,6 @@ async def get_image(filename: str) -> Union[HTMLResponse,StreamingResponse]:
     """ returns an image """
     image_class = MemeImage(meme_config_load())
     return image_class.get_as_http(filename)
-    #return StreamingResponse(content=image)
-
 
 @app.get("/static/js/{filename}")
 async def jsfile(filename: str) -> Union[FileResponse, HTMLResponse]:

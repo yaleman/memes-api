@@ -12,12 +12,12 @@
 
     <div id="app">
         <paginate
-          :page-count="pageCount"
-          :container-class="'pagination'"
-          :prev-text="'<<'"
-          :next-text="'>>'"
-          :initial-page="currentPage"
-          :click-handler="clickCallback"
+            v-model="currentPage"
+            :page-count="pageCount"
+            :container-class="'pagination  justify-content-center'"
+            :prev-text="'<<'"
+            :next-text="'>>'"
+            :click-handler="clickCallback"
         >
         </paginate>
       </div>

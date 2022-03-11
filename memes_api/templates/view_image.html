@@ -3,8 +3,7 @@
 {% block content %}
     <div class="row">
         <div class="col">
-            <br />
-        <img alt="{{image}}" title="{{image}}" src="/image/{{image|replace(" ","%20")}}" />
+        <img alt="{{image}}" title="{{image}}" src="/image/{{image|replace(" ","%20")}}" class="mx-auto"/>
         </div>
     </div>
     <div class="row">
@@ -24,8 +23,14 @@
             v-on:focus="$event.target.select()"
             />
         </div>
-
-        <div class="col-auto form-group"><button @click="copy_direct" class="form-control">Copy</button></div>
+        <div class="col-auto form-group">
+            <button
+            class="btn"
+            :class="{'btn-secondary': button_copy, 'btn-outline-dark' : !button_copy}"
+            @click="copy_direct"
+            id="copy_direct"
+            >Copy</button>
+        </div>
     </div>
     <div class="row">
         <div class="col form-group"><label for="markdown_big">Markdown full size</label></div>
@@ -38,6 +43,11 @@
                 ref="md_link"
                 class="form-control" value="![]({{og_image}})" disabled="true"/>
         </div>
-        <div class="col-auto form-group"><button @click="copy_md" class="form-control">Copy</button></div>
+        <div class="col-auto form-group">
+            <button type="button"
+            class="btn"
+            :class="{'btn-secondary': button_md, 'btn-outline-dark' : !button_md}"
+            @click="copy_md" id="copy_md">Copy</button>
+        </div>
     </div>
 {% endblock content %}

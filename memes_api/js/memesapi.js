@@ -1,4 +1,5 @@
 const imagesPerPage = 15;
+const buttonHighlightTime = 1000;
 
 const app = Vue.createApp({
     components: {
@@ -10,7 +11,9 @@ const app = Vue.createApp({
         return {
         images : [],
         search: '',
-        currentPage: 1 // default to the first page
+        currentPage: 1, // default to the first page
+        button_md: false,
+        button_copy: false,
         }
     },
     created () {
@@ -69,9 +72,6 @@ const app = Vue.createApp({
                 this.images = res.data.images;
             });
         },
-        resetform: function() {
-            this.search = "";
-        },
         updateUrl() {
             let qp = new URLSearchParams();
             if(this.search !== '') {
@@ -88,6 +88,7 @@ const app = Vue.createApp({
         },
         copy_direct() {
             /* clipboard copy example from https://www.w3schools.com/howto/howto_js_copy_clipboard.asp */
+            this.button_copy = true;
             this.$refs.direct_link.focus();
 
             /* Select the text field */
@@ -96,10 +97,15 @@ const app = Vue.createApp({
 
             /* Copy the text inside the text field */
             navigator.clipboard.writeText(this.$refs.direct_link.value);
+            this.$refs.md_link.setSelectionRange(0, 0); /* For mobile devices */
 
+            setTimeout(() => {
+                this.button_copy = false;
+            }, buttonHighlightTime);
         },
         copy_md() {
             /* clipboard copy example from https://www.w3schools.com/howto/howto_js_copy_clipboard.asp */
+            this.button_md = true;
             this.$refs.md_link.focus();
 
             /* Select the text field */
@@ -108,7 +114,13 @@ const app = Vue.createApp({
 
             /* Copy the text inside the text field */
             navigator.clipboard.writeText(this.$refs.md_link.value);
+            this.$refs.md_link.setSelectionRange(0, 0); /* For mobile devices */
+
+            setTimeout(() => {
+                this.button_md = false;
+            }, buttonHighlightTime);
         }
+
     },
     watch: {
         search() {
