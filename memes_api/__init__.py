@@ -117,8 +117,24 @@ class MemeImage:
                 body: bytes = image.get()["Body"]
                 return body
         except ClientError as error_message:
-            print(f"ClientError pulling {filename}: {error_message}", file=sys.stderr)
+            print(f"ClientError pulling '{filename}': {error_message}", file=sys.stderr)
         return None
+
+    def get_as_http(self, filename: str) -> Union[HTMLResponse,StreamingResponse]:
+        """ returns a Response object """
+        try:
+            image = self.s3_resource.Object(self.bucket, filename)
+            if "Body" in image.get():
+                body: bytes = image.get()["Body"]
+                return StreamingResponse(body)
+        except ClientError as error_message:
+            error_text = f"ClientError pulling '{filename}': {error_message}"
+            print(error_text, file=sys.stderr)
+            response_status = 500
+            if "ResponseMetadata" in error_message.response:
+                if "HTTPStatusCode" in error_message.response["ResponseMetadata"]:
+                    response_status = error_message.response["ResponseMetadata"]["HTTPStatusCode"]
+            return HTMLResponse(error_text,status_code=response_status )
 
 
 CSS_BASEDIR = Path(f"{os.path.dirname(__file__)}/css/").resolve().as_posix()
@@ -199,11 +215,8 @@ async def get_image_info(filename: str) -> HTMLResponse:
 async def get_image(filename: str) -> Union[HTMLResponse,StreamingResponse]:
     """ returns an image """
     image_class = MemeImage(meme_config_load())
-    image = image_class.get(filename)
-
-    if image is None:
-        return HTMLResponse(content="", status_code=404)
-    return StreamingResponse(content=image)
+    return image_class.get_as_http(filename)
+    #return StreamingResponse(content=image)
 
 
 @app.get("/static/js/{filename}")
