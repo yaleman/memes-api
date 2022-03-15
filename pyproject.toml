@@ -19,7 +19,7 @@ types-Pillow = "^9.0.6"
 [tool.poetry.dev-dependencies]
 pylint = "^2.12.2"
 pytest = "^7.1.0"
-mypy = "^0.940"
+mypy = "^0.941"
 black = "^22.1.0"
 pylint-pydantic = "^0.1.4"
 boto3-stubs = "^1.21.19"
