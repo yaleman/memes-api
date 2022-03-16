@@ -202,7 +202,7 @@ async def get_image_info(filename: str) -> HTMLResponse:
 
         context = default_context()
         context["image"] = filename
-        context["og_image"] = f"{context['baseurl']}/image/{filename.replace(' ', '%20')}"
+        context["og_image"] = f"{context['baseurl']}/thumbnail/{filename.replace(' ', '%20')}"
         context["page_title"] = f"Memes! - {filename}"
         new_filecontents = template.render(**context)
         return HTMLResponse(new_filecontents)
