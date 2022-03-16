@@ -61,7 +61,7 @@ const app = Vue.createApp({
             if (this.filteredImages.length % imagesPerPage != 0) {
                 addpage = 1;
             }
-            return (Math.round(this.filteredImages.length / imagesPerPage,0))+addpage;
+            return (Math.ceil(this.filteredImages.length / imagesPerPage,0));
         }
     },
     methods: {
@@ -128,6 +128,10 @@ const app = Vue.createApp({
     },
     watch: {
         search() {
+            if (this.currentPage > this.pageCount) {
+                console.log("Setting page to 1");
+                this.currentPage = 1;
+            }
             this.updateUrl();
         }
     },
