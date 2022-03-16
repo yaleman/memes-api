@@ -7,7 +7,7 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-boto3 = "^1.21.17"
+boto3 = "^1.21.19"
 Pillow = "^9.0.1"
 fastapi = "^0.75.0"
 uvicorn = "^0.17.5"
@@ -18,11 +18,11 @@ types-Pillow = "^9.0.6"
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.12.2"
-pytest = "^7.0.1"
-mypy = "^0.940"
+pytest = "^7.1.0"
+mypy = "^0.941"
 black = "^22.1.0"
 pylint-pydantic = "^0.1.4"
-boto3-stubs = "^1.21.17"
+boto3-stubs = "^1.21.19"
 requests = "^2.27.1"
 
 [build-system]
