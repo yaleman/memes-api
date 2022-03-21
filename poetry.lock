@@ -185,8 +185,8 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "boto3-stubs"
-version = "1.21.21"
-description = "Type annotations for boto3 1.21.21 generated with mypy-boto3-builder 7.3.0"
+version = "1.21.22"
+description = "Type annotations for boto3 1.21.22 generated with mypy-boto3-builder 7.3.0"
 category = "dev"
 optional = false
 python-versions = ">=3.6"
@@ -821,7 +821,7 @@ diagrams = ["jinja2", "railroad-diagrams"]
 
 [[package]]
 name = "pytest"
-version = "7.1.0"
+version = "7.1.1"
 description = "pytest: simple powerful testing with Python"
 category = "dev"
 optional = false
@@ -931,7 +931,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "types-pillow"
-version = "9.0.7"
+version = "9.0.8"
 description = "Typing stubs for Pillow"
 category = "main"
 optional = false
@@ -997,7 +997,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "808d49bd8049d808b1fe5f0c08ad2cfbd0b94562fd1845621f4c793602665c08"
+content-hash = "6d374172c97322616a8134d9f9d989d6ff06393b6598f4fb6a0bfc9f6b142d17"
 
 [metadata.files]
 aioboto3 = [
@@ -1143,8 +1143,8 @@ boto3 = [
     {file = "boto3-1.20.24.tar.gz", hash = "sha256:739705b28e6b2329ea3b481ba801d439c296aaf176f7850729147ba99bbf8a9a"},
 ]
 boto3-stubs = [
-    {file = "boto3-stubs-1.21.21.tar.gz", hash = "sha256:62fbfc0d74342f919ec7faf5fc9764d683cbda29024d1c44946daf27233d24ce"},
-    {file = "boto3_stubs-1.21.21-py3-none-any.whl", hash = "sha256:a0bf60ae62c9a37257173343ba3b3bf3bab3609a397d285bd66323a02576e13f"},
+    {file = "boto3-stubs-1.21.22.tar.gz", hash = "sha256:48f49bf7ce3210c2adef2e7b8daf51de282894d99470b23e876e729262afda9a"},
+    {file = "boto3_stubs-1.21.22-py3-none-any.whl", hash = "sha256:7bea922945ba1c3ad1d6adf60f688248a674dadadb6b4ff487f3bd55f1a960ea"},
 ]
 botocore = [
     {file = "botocore-1.23.24-py3-none-any.whl", hash = "sha256:e78d48c50c8c013fb9b362c6202fece2fe868edfd89b51968080180bdff41617"},
@@ -1540,8 +1540,8 @@ pyparsing = [
     {file = "pyparsing-3.0.7.tar.gz", hash = "sha256:18ee9022775d270c55187733956460083db60b37d0d0fb357445f3094eed3eea"},
 ]
 pytest = [
-    {file = "pytest-7.1.0-py3-none-any.whl", hash = "sha256:b555252a95bbb2a37a97b5ac2eb050c436f7989993565f5e0c9128fcaacadd0e"},
-    {file = "pytest-7.1.0.tar.gz", hash = "sha256:f1089d218cfcc63a212c42896f1b7fbf096874d045e1988186861a1a87d27b47"},
+    {file = "pytest-7.1.1-py3-none-any.whl", hash = "sha256:92f723789a8fdd7180b6b06483874feca4c48a5c76968e03bb3e7f806a1869ea"},
+    {file = "pytest-7.1.1.tar.gz", hash = "sha256:841132caef6b1ad17a9afde46dc4f6cfa59a05f9555aae5151f73bdf2820ca63"},
 ]
 python-dateutil = [
     {file = "python-dateutil-2.8.2.tar.gz", hash = "sha256:0123cacc1627ae19ddf3c27a5de5bd67ee4586fbdd6440d9748f8abb483d3e86"},
@@ -1576,8 +1576,8 @@ tomli = [
     {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
 ]
 types-pillow = [
-    {file = "types-Pillow-9.0.7.tar.gz", hash = "sha256:9f07eb34955694d4b4c8af5bd84dabe71ce2225eb05e80731626da6da50c9311"},
-    {file = "types_Pillow-9.0.7-py3-none-any.whl", hash = "sha256:80623b7a5d7c599937c6757dc262f9f4a597d110cf184adb3fb2fa8e75f497b9"},
+    {file = "types-Pillow-9.0.8.tar.gz", hash = "sha256:9b8a5c870fa1533c77155ab2d2708968f45ebc68ba38332b51362fbe47083fc6"},
+    {file = "types_Pillow-9.0.8-py3-none-any.whl", hash = "sha256:77b6de9c76973ac6f340b2ce41b254b21c8ead4e912e8492a9cb08d597ec8c4d"},
 ]
 typing-extensions = [
     {file = "typing_extensions-4.1.1-py3-none-any.whl", hash = "sha256:21c85e0fe4b9a155d0799430b0ad741cdce7e359660ccbd8b530613e8df88ce2"},
