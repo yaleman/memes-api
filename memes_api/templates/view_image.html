@@ -18,7 +18,7 @@
             class="form-control"
             id="direct_link"
             ref="direct_link"
-            value="{{og_image}}"
+            value="{{image_url}}"
             disabled="true"
             v-on:focus="$event.target.select()"
             />
@@ -41,7 +41,7 @@
                 type="text"
                 id="markdown_big"
                 ref="md_link"
-                class="form-control" value="![]({{og_image}})" disabled="true"/>
+                class="form-control" value="![]({{image_url}})" disabled="true"/>
         </div>
         <div class="col-auto form-group">
             <button type="button"

@@ -6,9 +6,8 @@ from memes_api import app
 
 client = TestClient(app)
 
-
 def test_homepage():
-
+    """ grabs the homepage """
     for _ in range(100):
         response = client.get("/")
         assert response.status_code == 200

@@ -1,13 +1,12 @@
 """ Memes API """
 
-from functools import lru_cache
 from hashlib import sha1
-from importlib.util import module_from_spec
+
 from io import BytesIO
 import json
 import os.path
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Union
 import sys
 
 from PIL import Image
@@ -15,7 +14,7 @@ from PIL import Image
 import aioboto3 # type: ignore
 
 from botocore.exceptions import ClientError
-from pydantic import BaseModel
+# from pydantic import BaseModel
 
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
@@ -23,53 +22,21 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from jinja2 import Environment, PackageLoader, select_autoescape
 import jinja2.exceptions
 
-class MemeConfig(BaseModel):
-    """ config file """
-    aws_access_key_id : str
-    aws_secret_access_key : str
-    aws_region: str
-    bucket: str
-    baseurl: str
-    endpoint_url: Optional[str]
+from .sessions import get_aioboto3_session
+from .config import meme_config_load
+from .constants import THUMBNAIL_BUCKET_PREFIX, THUMBNAIL_DIMENSIONS
+from .utils import default_context, save_thumbnail
 
-@lru_cache()
-def meme_config_load(filepath: Optional[Path]=None) -> MemeConfig:
-    """ config loader, returns a pydantic object, will try ~/.config/memes-api.json, memes-api.json, /etc/memes-api.json in order, returning the result of parsing the first one found. """
-    if filepath is not None:
-        if filepath.exists():
-            return MemeConfig.parse_file(filepath.expanduser().resolve())
-        raise FileNotFoundError(f"Couldn't find {filepath}")
-    for testpath in [
-        "~/.config/memes-api.json",
-        "memes-api.json",
-        "/etc/memes-api.json",
-    ]:
-        filepath = Path(testpath).expanduser().resolve()
-        if filepath.exists():
-            return MemeConfig.parse_file(filepath.expanduser().resolve())
-    raise FileNotFoundError(f"Couldn't find {filepath}")
-
-@lru_cache()
-def default_context() -> Dict[str, Union[str,bool]]:
-    """ returns a default context object """
-    return {
-        "page_title" : "Memes!",
-        "page_description" : "Sharing dem memes.",
-        "enable_search" : False,
-        "baseurl" : meme_config_load().baseurl,
-    }
 
 CSS_BASEDIR = Path(f"{os.path.dirname(__file__)}/css/").resolve().as_posix()
 IMAGES_BASEDIR = Path(f"{os.path.dirname(__file__)}/images/").resolve().as_posix()
 JS_BASEDIR = Path(f"{os.path.dirname(__file__)}/js/").resolve().as_posix()
 
-THUMBNAIL_DIMENSIONS = (200,200)
-
 app = FastAPI()
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 @app.get("/allimages")
-async def all_images() -> Dict[str, List[str]]:
+async def get_allimages() -> Dict[str, List[str]]:
     """ returns all the images """
     meme_config = meme_config_load()
     session = aioboto3.Session(
@@ -81,24 +48,14 @@ async def all_images() -> Dict[str, List[str]]:
     if meme_config.endpoint_url is not None:
         async with session.resource('s3', endpoint_url=meme_config.endpoint_url) as s3_resource:
             bucket = await s3_resource.Bucket(meme_config.bucket)
-            results = { "images" : [ image.key async for image in bucket.objects.iterator() ]}
+            results = { "images" : [ image.key async for image in bucket.objects.iterator() if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX) ]}
     else:
         async with session.resource('s3') as s3_resource:
             bucket = await s3_resource.Bucket(meme_config.bucket)
-            results = { "images" : [ image.key async for image in bucket.objects.iterator() ]}
+            results = { "images" : [ image.key async for image in bucket.objects.iterator() if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX) ]}
 
-    print(results, file=sys.stderr)
+    # print(results, file=sys.stderr)
     return results
-
-def get_aioboto3_session() -> aioboto3.Session:
-    """ gets a session """
-
-    meme_config = meme_config_load()
-    return aioboto3.Session(
-        aws_access_key_id=meme_config.aws_access_key_id,
-        aws_secret_access_key=meme_config.aws_secret_access_key,
-        region_name=meme_config.aws_region,
-    )
 
 @app.get("/thumbnail/{filename}")
 async def get_thumbnail(filename: str) -> Union[HTMLResponse,StreamingResponse]:
@@ -107,6 +64,17 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse,StreamingResponse]:
         's3',
         endpoint_url=meme_config_load().endpoint_url,
         ) as s3_client:
+
+        # try and get the pre-cached thumbnail
+        try:
+            image_object = await s3_client.get_object(Bucket=meme_config_load().bucket, Key=f"{THUMBNAIL_BUCKET_PREFIX}{filename}")
+            if "Body" in image_object:
+                content = await image_object['Body'].read()
+                return StreamingResponse(BytesIO(content))
+        except ClientError:
+            # thumbnail wasn't found, or wasn't loadable
+            pass
+
         try:
             image_object = await s3_client.get_object(Bucket=meme_config_load().bucket, Key=filename)
             if "Body" in image_object:
@@ -124,7 +92,6 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse,StreamingResponse]:
     tmpstorage = BytesIO()
     with Image.open(BytesIO(content)) as tempimage:
         tempimage.thumbnail(THUMBNAIL_DIMENSIONS)
-        # tempimage = tempimage.resize(THUMBNAIL_DIMENSIONS).convert('RGB')
         tempimage = tempimage.convert('RGB')
         expanded = Image.new('RGB', THUMBNAIL_DIMENSIONS, (255,255,255))
 
@@ -140,6 +107,14 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse,StreamingResponse]:
         expanded.save(tmpstorage, "JPEG")
     tmpstorage.seek(0)
     imghash = sha1(tmpstorage.read())
+    tmpstorage.seek(0)
+
+    # save the thunbnail to s3
+    async with get_aioboto3_session().client(
+        's3',
+        endpoint_url=meme_config_load().endpoint_url,
+        ) as s3_client:
+        await save_thumbnail(s3_client, filename, tmpstorage)
     tmpstorage.seek(0)
 
     headers = {
@@ -161,6 +136,7 @@ async def get_image_info(filename: str) -> HTMLResponse:
         context = default_context()
         context["image"] = filename
         context["og_image"] = f"{context['baseurl']}/thumbnail/{filename.replace(' ', '%20')}"
+        context["image_url"] = f"{context['baseurl']}/image/{filename.replace(' ', '%20')}"
         context["page_title"] = f"Memes! - {filename}"
         new_filecontents = template.render(**context)
         return HTMLResponse(new_filecontents)
@@ -199,7 +175,7 @@ async def get_image(filename: str) -> Union[HTMLResponse,StreamingResponse]:
     return StreamingResponse(BytesIO(content), headers=headers)
 
 @app.get("/static/js/{filename}")
-async def jsfile(filename: str) -> Union[FileResponse, HTMLResponse]:
+async def get_js_by_filename(filename: str) -> Union[FileResponse, HTMLResponse]:
     """ return a js file """
     filepath = Path(f"{os.path.dirname(__file__)}/js/{filename}").resolve()
     if not filepath.exists() or not filepath.is_file():
@@ -216,7 +192,7 @@ async def jsfile(filename: str) -> Union[FileResponse, HTMLResponse]:
     return FileResponse(filepath.as_posix())
 
 @app.get("/static/css/{filename}")
-async def css_get(filename: str) -> Union[FileResponse, HTMLResponse]:
+async def get_css_by_filename(filename: str) -> Union[FileResponse, HTMLResponse]:
     """ return the css file """
     filepath = Path(f"{os.path.dirname(__file__)}/css/{filename}").resolve()
     if not filepath.resolve().is_file() or not filepath.exists():
@@ -231,7 +207,7 @@ async def css_get(filename: str) -> Union[FileResponse, HTMLResponse]:
     return FileResponse(filepath.as_posix())
 
 @app.get("/static/images/{filename}")
-async def images_get(filename: str) -> Union[FileResponse, HTMLResponse]:
+async def get_static_image_by_filename(filename: str) -> Union[FileResponse, HTMLResponse]:
     """ return the filename file """
     filepath = Path(f"{os.path.dirname(__file__)}/images/{filename}").resolve()
     if not filepath.resolve().is_file() or not filepath.exists():
@@ -247,18 +223,18 @@ async def images_get(filename: str) -> Union[FileResponse, HTMLResponse]:
 
 
 @app.get("/robots.txt")
-async def robotstxt() -> HTMLResponse:
+async def get_robotstxt() -> HTMLResponse:
     """ robots.txt file """
     return HTMLResponse("""User-agent: *
 """)
 
 @app.get("/up")
-async def healthcheck() -> HTMLResponse:
+async def get_healthcheck() -> HTMLResponse:
     """ healthcheck endpoint """
     return HTMLResponse("OK")
 
 @app.get("/")
-async def home_page() -> HTMLResponse: # pylint: disable=invalid-name
+async def get_homepage() -> HTMLResponse: # pylint: disable=invalid-name
     """ homepage """
     jinja2_env = Environment(
         loader=PackageLoader(package_name="memes_api", package_path="./templates"),
