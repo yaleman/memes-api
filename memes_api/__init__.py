@@ -9,19 +9,17 @@ from pathlib import Path
 from typing import Dict, List, Union
 import sys
 
-from PIL import Image
-
 import aioboto3  # type: ignore
-
 from botocore.exceptions import ClientError
-
-# from pydantic import BaseModel
-
+import click
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from jinja2 import Environment, PackageLoader, select_autoescape
 import jinja2.exceptions
+from PIL import Image
+
+import uvicorn  # type: ignore
 
 from .sessions import get_aioboto3_session
 from .config import meme_config_load
@@ -306,3 +304,30 @@ async def get_homepage() -> HTMLResponse:  # pylint: disable=invalid-name
     except jinja2.exceptions.TemplateNotFound as template_error:
         print(f"Failed to load template: {template_error}", file=sys.stderr)
     return HTMLResponse("Something went wrong, sorry.", status_code=500)
+
+
+@click.command()
+@click.option("--host", type=str, default="0.0.0.0")
+@click.option("--port", type=int, default=8000)
+@click.option("--proxy-headers", is_flag=True, help="Turn on proxy headers")
+@click.option("--reload", is_flag=True)
+def cli(
+    host: str = "0.0.0.0",
+    port: int = 8000,
+    proxy_headers: bool = False,
+    reload: bool = False,
+) -> None:
+    """server"""
+    print(f"{proxy_headers=}", file=sys.stderr)
+    print(f"{reload=}", file=sys.stderr)
+    uvicorn_args = {
+        "app": "memes_api:app",
+        "reload": reload,
+        "host": host,
+        "port": port,
+        "proxy_headers": proxy_headers,
+    }
+    if proxy_headers:
+        uvicorn_args["forwarded_allow_ips"] = "*"
+    uvicorn.run(**uvicorn_args)
+
