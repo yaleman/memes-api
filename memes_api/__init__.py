@@ -330,4 +330,3 @@ def cli(
     if proxy_headers:
         uvicorn_args["forwarded_allow_ips"] = "*"
     uvicorn.run(**uvicorn_args)
-
