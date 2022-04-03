@@ -185,8 +185,8 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "boto3-stubs"
-version = "1.21.31"
-description = "Type annotations for boto3 1.21.31 generated with mypy-boto3-builder 7.5.5"
+version = "1.21.32"
+description = "Type annotations for boto3 1.21.32 generated with mypy-boto3-builder 7.5.7"
 category = "dev"
 optional = false
 python-versions = ">=3.6"
@@ -1010,7 +1010,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "9549034c69c40ec51a432e18bf80ed21e20f32fec1621654399a217da50304ed"
+content-hash = "c6745ad7a227b02a4d0c7574b0636a3270ad156bab5d0523738b9ab606739d9d"
 
 [metadata.files]
 aioboto3 = [
@@ -1156,8 +1156,8 @@ boto3 = [
     {file = "boto3-1.21.21.tar.gz", hash = "sha256:6fa0622f308cfd1da758966fc98b52fbd74b80606d14586c8ad82c7a6c4f32d0"},
 ]
 boto3-stubs = [
-    {file = "boto3-stubs-1.21.31.tar.gz", hash = "sha256:f7564967f2b98d8791e5c9fbc93982d9bdc2550cfbd28d3bca1a473779c45207"},
-    {file = "boto3_stubs-1.21.31-py3-none-any.whl", hash = "sha256:6b077e52d9af06972232f8ea88c964472d13b2602ce9e8578491c95082855c57"},
+    {file = "boto3-stubs-1.21.32.tar.gz", hash = "sha256:a414d67f36fb84f9b3839da3b922f910d81eaf0d80ed5cf6c09b8c4763199c80"},
+    {file = "boto3_stubs-1.21.32-py3-none-any.whl", hash = "sha256:a1e88d49fd0cab94d02cfc6871e4c07bc7270fc75e3f487822af477efc1917fe"},
 ]
 botocore = [
     {file = "botocore-1.24.21-py3-none-any.whl", hash = "sha256:92daca8775e738a9db9b465d533019285f09d541e903233261299fd87c2f842c"},
