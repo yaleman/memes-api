@@ -1,5 +1,9 @@
 {
 	"auto_merge" : [
-		"boto3","fastapi"
+		"aioboto3",
+		"fastapi",
+		"click",
+		"Pillow",
+		"Jinja2"
 	]
 }
