@@ -6,7 +6,7 @@ from memes_api import app
 
 client = TestClient(app)
 
-def test_homepage():
+def test_homepage() -> None:
     """ grabs the homepage """
     for _ in range(100):
         response = client.get("/")

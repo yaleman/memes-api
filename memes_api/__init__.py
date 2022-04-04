@@ -6,7 +6,7 @@ from io import BytesIO
 import json
 import os.path
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List, TypedDict, Union
 import sys
 
 import aioboto3  # type: ignore
@@ -72,9 +72,45 @@ async def get_allimages() -> Dict[str, List[str]]:
     return results
 
 
+class ThumbnailData(TypedDict):
+    """data returned from generate_thumbnail"""
+
+    hash: str
+    reader: BytesIO
+
+
+def generate_thumbnail(content: bytes) -> ThumbnailData:
+    """generate a thumbnail and return a BytesIO object to read it back"""
+    tmpstorage = BytesIO()
+    with Image.open(BytesIO(content)) as tempimage:
+        tempimage.thumbnail(THUMBNAIL_DIMENSIONS)
+        tempimage = tempimage.convert("RGB")
+        expanded = Image.new("RGB", THUMBNAIL_DIMENSIONS, (255, 255, 255))
+
+        paste_x = 0
+        paste_y = 0
+        # work out if we need to move it within the thumbnail block
+        if tempimage.height != THUMBNAIL_DIMENSIONS[0]:
+            paste_y = int((THUMBNAIL_DIMENSIONS[0] - tempimage.height) / 2)
+        if tempimage.width != THUMBNAIL_DIMENSIONS[0]:
+            paste_x = int((THUMBNAIL_DIMENSIONS[0] - tempimage.width) / 2)
+
+        expanded.paste(tempimage, (paste_x, paste_y))
+        expanded.save(tmpstorage, "JPEG")
+    tmpstorage.seek(0)
+    imghash = sha1(tmpstorage.read()).hexdigest()
+    tmpstorage.seek(0)
+    return ThumbnailData(hash=imghash, reader=tmpstorage)
+
+
 @app.get("/thumbnail/{filename}")
 async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]:
-    """returns an image thumbnailed"""
+    """returns an image thumbnailed
+
+    first it tries to pull a pre-cached thumbnail and just returns that
+
+    if not, it'll pull the original image and make a thumb from that
+    """
     async with get_aioboto3_session().client(
         "s3",
         endpoint_url=meme_config_load().endpoint_url,
@@ -111,37 +147,23 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]
                         "HTTPStatusCode"
                     ]
             return HTMLResponse(error_text, status_code=response_status)
-    tmpstorage = BytesIO()
-    with Image.open(BytesIO(content)) as tempimage:
-        tempimage.thumbnail(THUMBNAIL_DIMENSIONS)
-        tempimage = tempimage.convert("RGB")
-        expanded = Image.new("RGB", THUMBNAIL_DIMENSIONS, (255, 255, 255))
-
-        paste_x = 0
-        paste_y = 0
-        # work out if we need to move it within the thumbnail block
-        if tempimage.height != THUMBNAIL_DIMENSIONS[0]:
-            paste_y = int((THUMBNAIL_DIMENSIONS[0] - tempimage.height) / 2)
-        if tempimage.width != THUMBNAIL_DIMENSIONS[0]:
-            paste_x = int((THUMBNAIL_DIMENSIONS[0] - tempimage.width) / 2)
-
-        expanded.paste(tempimage, (paste_x, paste_y))
-        expanded.save(tmpstorage, "JPEG")
-    tmpstorage.seek(0)
-    imghash = sha1(tmpstorage.read())
-    tmpstorage.seek(0)
+    thumbnail_data = generate_thumbnail(content)
 
     # save the thunbnail to s3
     async with get_aioboto3_session().client(
         "s3",
         endpoint_url=meme_config_load().endpoint_url,
     ) as s3_client:
-        await save_thumbnail(s3_client, filename, tmpstorage)
-    tmpstorage.seek(0)
+        await save_thumbnail(s3_client, filename, thumbnail_data["reader"])
+    thumbnail_data["reader"].seek(0)
 
-    headers = {"ETag": f'W/"{imghash.hexdigest()}"', "Cache-Control": "max-age=86400"}
+    imghash = thumbnail_data["hash"]
+    headers = {
+        "ETag": f'W/"{imghash}"',
+        "Cache-Control": "max-age=86400",
+    }
     return StreamingResponse(
-        content=tmpstorage, media_type="image/jpeg", headers=headers
+        content=thumbnail_data["reader"], media_type="image/jpeg", headers=headers
     )
 
 
