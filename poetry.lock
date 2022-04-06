@@ -948,7 +948,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "types-pillow"
-version = "9.0.10"
+version = "9.0.11"
 description = "Typing stubs for Pillow"
 category = "main"
 optional = false
@@ -1014,7 +1014,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "2e88e29ab74a0f3e078e236b45dc9a1684c6a58959087232499dfde16bc1bd28"
+content-hash = "25a1a60566d6107cb296d0885da07adb46a9c1b27feb756bb03c576957e78440"
 
 [metadata.files]
 aioboto3 = [
@@ -1596,8 +1596,8 @@ tomli = [
     {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
 ]
 types-pillow = [
-    {file = "types-Pillow-9.0.10.tar.gz", hash = "sha256:0cb08e1e724f26f1e187fe86a8304f77430113358734a7d417a19962202ae1c8"},
-    {file = "types_Pillow-9.0.10-py3-none-any.whl", hash = "sha256:f74a8680e6d2604ac798fe9717851e86e58fb743f2c37ad60fda4237e28a30fd"},
+    {file = "types-Pillow-9.0.11.tar.gz", hash = "sha256:99e306bbe1f97884bb6fe9ddb87b6715fca5a4a368dad42e9366f46aa5877ea7"},
+    {file = "types_Pillow-9.0.11-py3-none-any.whl", hash = "sha256:cef022f67b19e2750b1a709b3ebaeee2bc9f95c704c673b07d52c2e09267077f"},
 ]
 typing-extensions = [
     {file = "typing_extensions-4.1.1-py3-none-any.whl", hash = "sha256:21c85e0fe4b9a155d0799430b0ad741cdce7e359660ccbd8b530613e8df88ce2"},
