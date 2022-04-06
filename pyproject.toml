@@ -13,7 +13,7 @@ uvicorn = "^0.17.5"
 pydantic = "^1.9.0"
 Jinja2 = "^3.1.1"
 click = "^8.1.2"
-types-Pillow = "^9.0.10"
+types-Pillow = "^9.0.11"
 aiobotocore = "^2.1.2"
 aioboto3 = "^9.4.0"
 
