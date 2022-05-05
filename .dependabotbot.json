@@ -4,6 +4,6 @@
 		"fastapi",
 		"click",
 		"Pillow",
-		"Jinja2"
+		"jinja2"
 	]
 }
