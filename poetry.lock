@@ -804,7 +804,7 @@ email = ["email-validator (>=1.0.3)"]
 
 [[package]]
 name = "pylint"
-version = "2.13.7"
+version = "2.13.8"
 description = "python code static checker"
 category = "dev"
 optional = false
@@ -1016,7 +1016,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "1251e542a51683bc32eb95abfa1fdff6e2b935c7f1cb2b8d85bcbdc999bd2909"
+content-hash = "5c3b0979f9ce6de641b808fb004e927c9849fc976f8dfc612da8ee756fb06a59"
 
 [metadata.files]
 aioboto3 = [
@@ -1555,8 +1555,8 @@ pydantic = [
     {file = "pydantic-1.9.0.tar.gz", hash = "sha256:742645059757a56ecd886faf4ed2441b9c0cd406079c2b4bee51bcc3fbcd510a"},
 ]
 pylint = [
-    {file = "pylint-2.13.7-py3-none-any.whl", hash = "sha256:13ddbbd8872c804574149e81197c28877eba75224ba6b76cd8652fc31df55c1c"},
-    {file = "pylint-2.13.7.tar.gz", hash = "sha256:911d3a97c808f7554643bcc5416028cfdc42eae34ed129b150741888c688d5d5"},
+    {file = "pylint-2.13.8-py3-none-any.whl", hash = "sha256:f87e863a0b08f64b5230e7e779bcb75276346995737b2c0dc2793070487b1ff6"},
+    {file = "pylint-2.13.8.tar.gz", hash = "sha256:ced8968c3b699df0615e2a709554dec3ddac2f5cd06efadb69554a69eeca364a"},
 ]
 pylint-pydantic = [
     {file = "pylint_pydantic-0.1.4-py3-none-any.whl", hash = "sha256:d42d9e95255b2f70f82a674cec159f417263363c7da0e28998964d83d7330c72"},
