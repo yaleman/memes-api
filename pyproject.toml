@@ -18,7 +18,7 @@ aiobotocore = "^2.1.2"
 aioboto3 = "^9.4.0"
 
 [tool.poetry.dev-dependencies]
-pylint = "^2.13.9"
+pylint = "^2.14.0"
 pytest = "^7.1.2"
 mypy = "^0.960"
 black = "^22.3.0"
