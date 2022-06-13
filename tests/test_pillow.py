@@ -1,6 +1,5 @@
 """ test image things """
 
-from email.mime import image
 from pathlib import Path
 
 from memes_api import generate_thumbnail

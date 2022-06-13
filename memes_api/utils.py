@@ -10,7 +10,7 @@ from .config import meme_config_load
 from .constants import THUMBNAIL_BUCKET_PREFIX
 
 
-class DefaultContext(TypedDict):
+class DefaultPageRenderContext(TypedDict):
     """default page context"""
 
     page_title: str
@@ -23,9 +23,9 @@ class DefaultContext(TypedDict):
 
 
 @lru_cache()
-def default_context() -> DefaultContext:
-    """returns a default context object"""
-    context: DefaultContext = {
+def default_page_render_context() -> DefaultPageRenderContext:
+    """returns a default context object for page rendering"""
+    context: DefaultPageRenderContext = {
         "page_title": "Memes!",
         "page_description": "Sharing dem memes.",
         "enable_search": False,

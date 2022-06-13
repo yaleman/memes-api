@@ -24,7 +24,7 @@ import uvicorn  # type: ignore
 from .sessions import get_aioboto3_session
 from .config import meme_config_load
 from .constants import THUMBNAIL_BUCKET_PREFIX, THUMBNAIL_DIMENSIONS
-from .utils import default_context, save_thumbnail
+from .utils import default_page_render_context, save_thumbnail
 
 
 CSS_BASEDIR = Path(f"{os.path.dirname(__file__)}/css/").resolve().as_posix()
@@ -177,7 +177,7 @@ async def get_image_info(filename: str) -> HTMLResponse:
     try:
         template = jinja2_env.get_template("view_image.html")
 
-        context = default_context()
+        context = default_page_render_context()
         context["image"] = filename
         context[
             "og_image"
@@ -318,7 +318,7 @@ async def get_homepage() -> HTMLResponse:  # pylint: disable=invalid-name
     )
     try:
         template = jinja2_env.get_template("index.html")
-        context = default_context()
+        context = default_page_render_context()
         context["enable_search"] = True
         new_filecontents = template.render(**context)
         return HTMLResponse(new_filecontents)
