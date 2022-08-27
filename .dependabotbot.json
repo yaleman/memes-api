@@ -1,5 +1,6 @@
 {
 	"auto_merge" : [
+                "boto3-stubs",
 		"aioboto3",
 		"fastapi",
 		"click",
