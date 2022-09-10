@@ -138,14 +138,18 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]
             else:
                 return HTMLResponse(status_code=404)
         except ClientError as error_message:
-            error_text = f"ClientError pulling '{filename}': {error_message}"
-            print(error_text, file=sys.stderr)
-            response_status = 500
-            if "ResponseMetadata" in error_message.response:
-                if "HTTPStatusCode" in error_message.response["ResponseMetadata"]:
-                    response_status = error_message.response["ResponseMetadata"][
-                        "HTTPStatusCode"
-                    ]
+            if error_message.response['Error']['Code'] == "NoSuchKey":
+                response_status = 404
+                error_text=f"File not found '{filename}'"
+            else:
+                error_text = f"ClientError pulling '{filename}': {error_message}"
+                print(error_text, file=sys.stderr)
+                response_status = 500
+                if "ResponseMetadata" in error_message.response:
+                    if "HTTPStatusCode" in error_message.response["ResponseMetadata"]:
+                        response_status = error_message.response["ResponseMetadata"][
+                            "HTTPStatusCode"
+                        ]
             return HTMLResponse(error_text, status_code=response_status)
     thumbnail_data = generate_thumbnail(content)
 
@@ -212,14 +216,18 @@ async def get_image(filename: str) -> Union[HTMLResponse, StreamingResponse]:
                 print("Couldn't find body!", file=sys.stderr)
                 return HTMLResponse(status_code=404)
         except ClientError as error_message:
-            error_text = f"ClientError pulling '{filename}': {error_message}"
-            print(error_text, file=sys.stderr)
-            response_status = 500
-            if "ResponseMetadata" in error_message.response:
-                if "HTTPStatusCode" in error_message.response["ResponseMetadata"]:
-                    response_status = error_message.response["ResponseMetadata"][
-                        "HTTPStatusCode"
-                    ]
+            if error_message.response['Error']['Code'] == "NoSuchKey":
+                response_status = 404
+                error_text=f"File not found '{filename}'"
+            else:
+                response_status = 500
+                error_text = f"ClientError pulling '{filename}': {error_message}"
+                print(error_text, file=sys.stderr)
+                if "ResponseMetadata" in error_message.response:
+                    if "HTTPStatusCode" in error_message.response["ResponseMetadata"]:
+                        response_status = error_message.response["ResponseMetadata"][
+                            "HTTPStatusCode"
+                        ]
             return HTMLResponse(error_text, status_code=response_status)
     headers = {
         "content_type": ob_info["content-type"],
