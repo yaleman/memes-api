@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "memes-api"
-version = "0.0.1"
+version = "0.0.2"
 description = "A memes API"
 authors = ["James Hogkinson <james@terminaloutcomes.com>"]
 license = "MIT"
