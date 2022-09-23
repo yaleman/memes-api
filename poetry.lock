@@ -954,8 +954,8 @@ optional = false
 python-versions = ">=3.6,<4.0"
 
 [[package]]
-name = "types-pillow"
-version = "9.2.1"
+name = "types-Pillow"
+version = "9.2.2"
 description = "Typing stubs for Pillow"
 category = "main"
 optional = false
@@ -1028,7 +1028,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "42de7a5066d58abfd305fa14995ab8d004eac0fad10c0cfe02c545bf6b976832"
+content-hash = "8a80fc3fca09bd7efad0a24409e27bf14de38ff8285f5e65d85e439fa2e68135"
 
 [metadata.files]
 aioboto3 = [
@@ -1626,9 +1626,9 @@ tomlkit = [
     {file = "tomlkit-0.11.1-py3-none-any.whl", hash = "sha256:1c5bebdf19d5051e2e1de6cf70adfc5948d47221f097fcff7a3ffc91e953eaf5"},
     {file = "tomlkit-0.11.1.tar.gz", hash = "sha256:61901f81ff4017951119cd0d1ed9b7af31c821d6845c8c477587bbdcd5e5854e"},
 ]
-types-pillow = [
-    {file = "types-Pillow-9.2.1.tar.gz", hash = "sha256:9781104ee2176f680576523fa2a2b83b134957aec6f4d62582cc9e74c93a60b4"},
-    {file = "types_Pillow-9.2.1-py3-none-any.whl", hash = "sha256:d63743ef631e47f8d8669590ea976162321a9a7604588b424b6306533453fb63"},
+types-Pillow = [
+    {file = "types-Pillow-9.2.2.tar.gz", hash = "sha256:6b525b0951ada076f3aefe2347e0bff6231283ce959ad8577a4416604acc673c"},
+    {file = "types_Pillow-9.2.2-py3-none-any.whl", hash = "sha256:bfe14afa1e9047a52b3dc326c93b4f57db72641794e194f11b511f68b0061814"},
 ]
 types-s3transfer = [
     {file = "types-s3transfer-0.6.0.tar.gz", hash = "sha256:e6d71efb01985fc8561b951230f93c4062075b88adf293142b2d4b835c2cae63"},
