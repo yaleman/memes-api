@@ -961,7 +961,7 @@ python-versions = ">=3.6,<4.0"
 
 [[package]]
 name = "types-pillow"
-version = "9.3.0.0"
+version = "9.3.0.1"
 description = "Typing stubs for Pillow"
 category = "main"
 optional = false
@@ -1479,6 +1479,8 @@ pathspec = [
     {file = "pathspec-0.9.0.tar.gz", hash = "sha256:e564499435a2673d586f6b2130bb5b95f04a3ba06f81b8f895b651a3c76aabb1"},
 ]
 pillow = [
+    {file = "Pillow-9.3.0-1-cp37-cp37m-win32.whl", hash = "sha256:e6ea6b856a74d560d9326c0f5895ef8050126acfdc7ca08ad703eb0081e82b74"},
+    {file = "Pillow-9.3.0-1-cp37-cp37m-win_amd64.whl", hash = "sha256:32a44128c4bdca7f31de5be641187367fe2a450ad83b833ef78910397db491aa"},
     {file = "Pillow-9.3.0-cp310-cp310-macosx_10_10_x86_64.whl", hash = "sha256:0b7257127d646ff8676ec8a15520013a698d1fdc48bc2a79ba4e53df792526f2"},
     {file = "Pillow-9.3.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:b90f7616ea170e92820775ed47e136208e04c967271c9ef615b6fbd08d9af0e3"},
     {file = "Pillow-9.3.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:68943d632f1f9e3dce98908e873b3a090f6cba1cbb1b892a9e8d97c938871fbe"},
@@ -1633,8 +1635,8 @@ tomlkit = [
     {file = "tomlkit-0.11.1.tar.gz", hash = "sha256:61901f81ff4017951119cd0d1ed9b7af31c821d6845c8c477587bbdcd5e5854e"},
 ]
 types-pillow = [
-    {file = "types-Pillow-9.3.0.0.tar.gz", hash = "sha256:0851a1b3ff002253a7af8f7eaf74d79fb761430933bd1aeb73d853a17f2a0a9d"},
-    {file = "types_Pillow-9.3.0.0-py3-none-any.whl", hash = "sha256:df09de7e557706c16fb30db887327c7f1c81e8ebc703d9d4739bfda7cad0e733"},
+    {file = "types-Pillow-9.3.0.1.tar.gz", hash = "sha256:f3b7cada3fa496c78d75253c6b1f07a843d625f42e5639b320a72acaff6f7cfb"},
+    {file = "types_Pillow-9.3.0.1-py3-none-any.whl", hash = "sha256:79837755fe9659f29efd1016e9903ac4a500e0c73260483f07296bd6ca47668b"},
 ]
 types-s3transfer = [
     {file = "types-s3transfer-0.6.0.tar.gz", hash = "sha256:e6d71efb01985fc8561b951230f93c4062075b88adf293142b2d4b835c2cae63"},
