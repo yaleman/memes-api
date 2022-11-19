@@ -8,7 +8,7 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.9"
 Pillow = "^9.3.0"
-fastapi = "^0.86.0"
+fastapi = "^0.87.0"
 uvicorn = "^0.19.0"
 pydantic = "^1.10.2"
 Jinja2 = "^3.1.1"
@@ -25,6 +25,7 @@ black = "^22.10.0"
 pylint-pydantic = "^0.1.4"
 requests = "^2.28.1"
 boto3-stubs = "^1.26.12"
+httpx = "^0.23.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
