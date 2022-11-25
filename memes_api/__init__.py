@@ -19,7 +19,7 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 import jinja2.exceptions
 from PIL import Image
 
-import uvicorn  # type: ignore
+import uvicorn
 
 from .sessions import get_aioboto3_session
 from .config import meme_config_load
@@ -359,4 +359,4 @@ def cli(
     }
     if proxy_headers:
         uvicorn_args["forwarded_allow_ips"] = "*"
-    uvicorn.run(**uvicorn_args)
+    uvicorn.run(**uvicorn_args) #type: ignore

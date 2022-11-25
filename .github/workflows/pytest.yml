@@ -2,10 +2,7 @@ name: Run pytest
 
 "on":
   push:
-    branches:
-      # - main  # Set a branch to deploy
   pull_request:
-
 jobs:
   pytest:
     runs-on: ubuntu-latest
