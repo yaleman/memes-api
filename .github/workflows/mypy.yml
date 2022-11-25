@@ -5,7 +5,9 @@ name: mypy
     branches:
       - main  # Set a branch to deploy
   pull_request:
-
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   mypy:
     runs-on: ubuntu-latest
