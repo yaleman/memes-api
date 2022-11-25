@@ -2,7 +2,9 @@
 name = "memes-api"
 version = "0.0.2"
 description = "A memes API"
-authors = ["James Hogkinson <james@terminaloutcomes.com>"]
+authors = [
+    "James Hogkinson <james@terminaloutcomes.com>",
+]
 license = "MIT"
 
 [tool.poetry.dependencies]
@@ -27,13 +29,25 @@ requests = "^2.28.1"
 boto3-stubs = "^1.26.12"
 httpx = "^0.23.1"
 
+[tool.poetry.scripts]
+memes-api = "memes_api.__main__:cli"
+memes-healthcheck = "memes_api.healthcheck:cli"
+
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = [
+    "poetry-core>=1.0.0",
+]
 build-backend = "poetry.core.masonry.api"
 
+[project]
+name = "memes-api"
+description = "A memes API"
+license = "MIT"
+version = "0.0.2"
+authors = [
+    { name = "James Hogkinson", email = "james@terminaloutcomes.com" },
+]
+
 [project.scripts]
-"memes-api" = 'memes_api.__main__:cli'
-"memes-healthcheck" = 'memes_api.healthcheck:cli'
-[tool.poetry.scripts]
-'memes-api' = 'memes_api.__main__:cli'
-"memes-healthcheck" = 'memes_api.healthcheck:cli'
+memes-api = "memes_api.__main__:cli"
+memes-healthcheck = "memes_api.healthcheck:cli"
