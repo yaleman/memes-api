@@ -169,8 +169,8 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "boto3-stubs"
-version = "1.26.37"
-description = "Type annotations for boto3 1.26.37 generated with mypy-boto3-builder 7.12.2"
+version = "1.26.40"
+description = "Type annotations for boto3 1.26.40 generated with mypy-boto3-builder 7.12.2"
 category = "dev"
 optional = false
 python-versions = ">=3.7"
@@ -215,7 +215,7 @@ backup-gateway = ["mypy-boto3-backup-gateway (>=1.26.0,<1.27.0)"]
 backupstorage = ["mypy-boto3-backupstorage (>=1.26.0,<1.27.0)"]
 batch = ["mypy-boto3-batch (>=1.26.0,<1.27.0)"]
 billingconductor = ["mypy-boto3-billingconductor (>=1.26.0,<1.27.0)"]
-boto3 = ["boto3 (==1.26.37)", "botocore (==1.29.37)"]
+boto3 = ["boto3 (==1.26.40)", "botocore (==1.29.40)"]
 braket = ["mypy-boto3-braket (>=1.26.0,<1.27.0)"]
 budgets = ["mypy-boto3-budgets (>=1.26.0,<1.27.0)"]
 ce = ["mypy-boto3-ce (>=1.26.0,<1.27.0)"]
@@ -1120,7 +1120,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "507073a9529b82f1ded07ae8afc1e804905f1dbd2efb386ffad1a047850565a8"
+content-hash = "44331e74e274fbc6289a5fb3b3465a27e15f665325713eabc5d960ea99c7e0c2"
 
 [metadata.files]
 aioboto3 = [
@@ -1262,8 +1262,8 @@ boto3 = [
     {file = "boto3-1.21.21.tar.gz", hash = "sha256:6fa0622f308cfd1da758966fc98b52fbd74b80606d14586c8ad82c7a6c4f32d0"},
 ]
 boto3-stubs = [
-    {file = "boto3-stubs-1.26.37.tar.gz", hash = "sha256:f83574c4b835e38ffeeb644c4f04cb8f53b4a2672e62df23a473b29aed557046"},
-    {file = "boto3_stubs-1.26.37-py3-none-any.whl", hash = "sha256:b2a31bfc2088516775687835c6bca236d94790ec859bbf8bcf1a721bc837ce4a"},
+    {file = "boto3-stubs-1.26.40.tar.gz", hash = "sha256:a8042e742e78d77c0f00db71e1ac33844c9270493e0b85cc59f6ce203eb1b5a7"},
+    {file = "boto3_stubs-1.26.40-py3-none-any.whl", hash = "sha256:50c662089e36a1b136f84653a7e7aa7d10efaea92726331b5898d017d3c037d8"},
 ]
 botocore = [
     {file = "botocore-1.24.21-py3-none-any.whl", hash = "sha256:92daca8775e738a9db9b465d533019285f09d541e903233261299fd87c2f842c"},
