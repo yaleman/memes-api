@@ -1044,7 +1044,7 @@ python-versions = ">=3.7,<4.0"
 
 [[package]]
 name = "types-pillow"
-version = "9.3.0.4"
+version = "9.4.0.0"
 description = "Typing stubs for Pillow"
 category = "main"
 optional = false
@@ -1120,7 +1120,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "2060b6d90c33c171b95a21058f146dd431f5ad000b43bad205a6b6bfe024d502"
+content-hash = "35b2cde4c2084802b82c6c3ce6e1e92e891232c4fd5ffb1c68a14204b8011d5e"
 
 [metadata.files]
 aioboto3 = [
@@ -1755,8 +1755,8 @@ types-awscrt = [
     {file = "types_awscrt-0.15.3.tar.gz", hash = "sha256:ff24dcbed0d1d27bc2565702af0a2ae5eb73223de87dfe3e4e1bf2eaf00a57ec"},
 ]
 types-pillow = [
-    {file = "types-Pillow-9.3.0.4.tar.gz", hash = "sha256:c18d466dc18550d96b8b4a279ff94f0cbad696825b5ad55466604f1daf5709de"},
-    {file = "types_Pillow-9.3.0.4-py3-none-any.whl", hash = "sha256:98b8484ff343676f6f7051682a6cfd26896e993e86b3ce9badfa0ec8750f5405"},
+    {file = "types-Pillow-9.4.0.0.tar.gz", hash = "sha256:ef8a823638ceb765a144a98a2f816b8912da0337c5c2556d33774f1434f9918c"},
+    {file = "types_Pillow-9.4.0.0-py3-none-any.whl", hash = "sha256:246f0dc52d575ef64e01f06f41be37a492b542ee3180638a7b874a6dd4d48c01"},
 ]
 types-s3transfer = [
     {file = "types_s3transfer-0.6.0.post5-py3-none-any.whl", hash = "sha256:cfcbee11c16d60af3feb3dbffea3a85b32129235b562912dece310a45ae83a2c"},
