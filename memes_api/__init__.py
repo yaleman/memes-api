@@ -18,7 +18,7 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from jinja2 import Environment, PackageLoader, select_autoescape
 import jinja2.exceptions
 from PIL import Image
-
+from pydantic import BaseModel
 import uvicorn
 
 from .sessions import get_aioboto3_session
@@ -35,8 +35,22 @@ app = FastAPI()
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
+class ImageList(BaseModel):
+    """ list of images from the filesystem """
+    images: List[str]
+
+class ThumbnailData(BaseModel):
+    """data returned from generate_thumbnail"""
+    hash: str
+    reader: BytesIO
+
+    # pylint: disable=too-few-public-methods
+    class Config:
+        """ config sub-class"""
+        arbitrary_types_allowed = True
+
 @app.get("/allimages")
-async def get_allimages() -> Dict[str, List[str]]:
+async def get_allimages() -> ImageList:
     """returns all the images"""
     meme_config = meme_config_load()
     session = aioboto3.Session(
@@ -45,38 +59,28 @@ async def get_allimages() -> Dict[str, List[str]]:
         region_name=meme_config.aws_region,
     )
 
+
     if meme_config.endpoint_url is not None:
         async with session.resource(
             "s3", endpoint_url=meme_config.endpoint_url
         ) as s3_resource:
             bucket = await s3_resource.Bucket(meme_config.bucket)
-            results = {
-                "images": [
+            return ImageList(images=[
                     image.key
                     async for image in bucket.objects.iterator()
                     if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX)
                 ]
-            }
+            )
     else:
         async with session.resource("s3") as s3_resource:
             bucket = await s3_resource.Bucket(meme_config.bucket)
-            results = {
-                "images": [
+            return ImageList(images = [
                     image.key
                     async for image in bucket.objects.iterator()
                     if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX)
                 ]
-            }
+            )
 
-    # print(results, file=sys.stderr)
-    return results
-
-
-class ThumbnailData(TypedDict):
-    """data returned from generate_thumbnail"""
-
-    hash: str
-    reader: BytesIO
 
 
 def generate_thumbnail(content: bytes) -> ThumbnailData:
@@ -103,7 +107,7 @@ def generate_thumbnail(content: bytes) -> ThumbnailData:
     return ThumbnailData(hash=imghash, reader=tmpstorage)
 
 
-@app.get("/thumbnail/{filename}")
+@app.get("/thumbnail/{filename}", response_model=None)
 async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]:
     """returns an image thumbnailed
 
@@ -158,20 +162,20 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]
         "s3",
         endpoint_url=meme_config_load().endpoint_url,
     ) as s3_client:
-        await save_thumbnail(s3_client, filename, thumbnail_data["reader"])
-    thumbnail_data["reader"].seek(0)
+        await save_thumbnail(s3_client, filename, thumbnail_data.reader)
+    thumbnail_data.reader.seek(0)
 
-    imghash = thumbnail_data["hash"]
+    imghash = thumbnail_data.hash
     headers = {
         "ETag": f'W/"{imghash}"',
         "Cache-Control": "max-age=86400",
     }
     return StreamingResponse(
-        content=thumbnail_data["reader"], media_type="image/jpeg", headers=headers
+        content=thumbnail_data.reader, media_type="image/jpeg", headers=headers
     )
 
 
-@app.get("/image_info/{filename}")
+@app.get("/image_info/{filename}", response_model=None)
 async def get_image_info(filename: str) -> HTMLResponse:
     """gets the image info page"""
     jinja2_env = Environment(
@@ -198,7 +202,7 @@ async def get_image_info(filename: str) -> HTMLResponse:
     return HTMLResponse("Failed to render page, sorry!", status_code=500)
 
 
-@app.get("/image/{filename}")
+@app.get("/image/{filename}", response_model=None)
 async def get_image(filename: str) -> Union[HTMLResponse, StreamingResponse]:
     """returns an image"""
     meme_config = meme_config_load()
@@ -236,7 +240,7 @@ async def get_image(filename: str) -> Union[HTMLResponse, StreamingResponse]:
     return StreamingResponse(BytesIO(content), headers=headers)
 
 
-@app.get("/static/js/{filename}")
+@app.get("/static/js/{filename}", response_model=None)
 async def get_js_by_filename(filename: str) -> Union[FileResponse, HTMLResponse]:
     """return a js file"""
     filepath = Path(f"{os.path.dirname(__file__)}/js/{filename}").resolve()
@@ -258,7 +262,7 @@ async def get_js_by_filename(filename: str) -> Union[FileResponse, HTMLResponse]
     return FileResponse(filepath.as_posix())
 
 
-@app.get("/static/css/{filename}")
+@app.get("/static/css/{filename}", response_model=None)
 async def get_css_by_filename(filename: str) -> Union[FileResponse, HTMLResponse]:
     """return the css file"""
     filepath = Path(f"{os.path.dirname(__file__)}/css/{filename}").resolve()
@@ -279,7 +283,7 @@ async def get_css_by_filename(filename: str) -> Union[FileResponse, HTMLResponse
     return FileResponse(filepath.as_posix())
 
 
-@app.get("/static/images/{filename}")
+@app.get("/static/images/{filename}", response_model=None)
 async def get_static_image_by_filename(
     filename: str,
 ) -> Union[FileResponse, HTMLResponse]:
@@ -302,7 +306,7 @@ async def get_static_image_by_filename(
     return FileResponse(filepath.as_posix())
 
 
-@app.get("/robots.txt")
+@app.get("/robots.txt", response_model=None)
 async def get_robotstxt() -> HTMLResponse:
     """robots.txt file"""
     return HTMLResponse(
@@ -311,13 +315,13 @@ async def get_robotstxt() -> HTMLResponse:
     )
 
 
-@app.get("/up")
+@app.get("/up", response_model=None)
 async def get_healthcheck() -> HTMLResponse:
     """healthcheck endpoint"""
     return HTMLResponse("OK")
 
 
-@app.get("/")
+@app.get("/", response_model=None)
 async def get_homepage() -> HTMLResponse:  # pylint: disable=invalid-name
     """homepage"""
     jinja2_env = Environment(
