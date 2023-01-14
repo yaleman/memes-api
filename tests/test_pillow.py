@@ -18,5 +18,5 @@ def test_image_thumbnail() -> None:
 
     thumbnail = generate_thumbnail(image_content)
 
-    assert thumbnail["hash"] == "be2b9fd22aaae79a3d4decb391b18cf8645b51bd"
-    assert len(thumbnail["reader"].read()) >= 4096
+    assert thumbnail.hash == "be2b9fd22aaae79a3d4decb391b18cf8645b51bd"
+    assert len(thumbnail.reader.read()) >= 4096
