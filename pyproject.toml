@@ -33,6 +33,9 @@ httpx = "^0.23.3"
 memes-api = "memes_api.__main__:cli"
 memes-healthcheck = "memes_api.healthcheck:cli"
 
+[tool.mypy]
+plugins = "pydantic.mypy"
+
 [build-system]
 requires = [
     "poetry-core>=1.0.0",
