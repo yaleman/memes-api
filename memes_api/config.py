@@ -20,7 +20,11 @@ class MemeConfig(BaseModel):
 
 @lru_cache()
 def meme_config_load(filepath: Optional[Path] = None) -> MemeConfig:
-    """config loader, returns a pydantic object, will try ~/.config/memes-api.json, memes-api.json, /etc/memes-api.json in order, returning the result of parsing the first one found."""
+    """config loader, returns a pydantic object, will try
+    ~/.config/memes-api.json,
+    memes-api.json,
+    /etc/memes-api.json in order,
+    returning the result of parsing the first one found."""
     if filepath is not None:
         if filepath.exists():
             return MemeConfig.parse_file(filepath.expanduser().resolve())

@@ -6,7 +6,7 @@ from io import BytesIO
 import json
 import os.path
 from pathlib import Path
-from typing import Dict, List, TypedDict, Union
+from typing import List, Union
 import sys
 
 import aioboto3  # type: ignore
@@ -15,6 +15,7 @@ import click
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
+
 from jinja2 import Environment, PackageLoader, select_autoescape
 import jinja2.exceptions
 from PIL import Image
@@ -33,6 +34,8 @@ JS_BASEDIR = Path(f"{os.path.dirname(__file__)}/js/").resolve().as_posix()
 
 app = FastAPI()
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+
 
 class ImageList(BaseModel):
     """ list of images from the filesystem """
