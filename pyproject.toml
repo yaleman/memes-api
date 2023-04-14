@@ -27,7 +27,7 @@ black = "^23.3.0"
 pylint-pydantic = "^0.1.8"
 requests = "^2.28.2"
 boto3-stubs = "^1.26.109"
-httpx = "^0.23.3"
+httpx = "^0.24.0"
 
 [tool.poetry.scripts]
 memes-api = "memes_api.__main__:cli"
