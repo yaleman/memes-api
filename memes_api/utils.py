@@ -15,24 +15,30 @@ class DefaultPageRenderContext(TypedDict):
 
     page_title: str
     page_description: str
-    enable_search: bool
     baseurl: str
     og_image: Optional[str]
     image: Optional[str]
     image_url: Optional[str]
 
+    # feature flags
+    enable_search: bool
+    enable_login: bool
+    logged_in: bool
 
 @lru_cache()
 def default_page_render_context() -> DefaultPageRenderContext:
     """returns a default context object for page rendering"""
+    meme_config = meme_config_load()
     context: DefaultPageRenderContext = {
         "page_title": "Memes!",
         "page_description": "Sharing dem memes.",
-        "enable_search": False,
-        "baseurl": meme_config_load().baseurl,
+        "baseurl": meme_config.baseurl,
         "og_image": None,
         "image": None,
         "image_url": None,
+        "enable_search" : meme_config.enable_search,
+        "enable_login" : meme_config.enable_login,
+        "logged_in": False,
     }
     return context
 

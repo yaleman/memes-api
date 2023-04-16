@@ -4,6 +4,19 @@
       <a class="navbar-brand" href="/">
         <img src="/static/images/icon.svg" alt="Memes!" width="30" height="24" class="d-inline-block align-text-top">
         Memes!</a>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto"></ul>>
+
+        {% if enable_login %}
+          {% if logged_in %}
+            <li class="nav-item "><a href="/admin" class="nav-link nav">Admin</a></li>
+            <li class="nav-item "><a href="/logout" class="nav-link nav">Log Out</a></li>
+          {% else %}
+            <li class="nav-item "><a href="/login" class="nav-link nav">Log In</a></li>
+          {% endif %}
+        {% endif %}
+          </ul>
+        </div>
       {% if enable_search %}
       <div class=" .align-self-end" id="navbarCollapse">
         <form class="d-flex" action="/">

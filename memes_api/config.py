@@ -4,7 +4,7 @@ from functools import lru_cache
 from typing import Optional
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class MemeConfig(BaseModel):
@@ -17,6 +17,14 @@ class MemeConfig(BaseModel):
     baseurl: str
     endpoint_url: Optional[str]
 
+    enable_search: bool = Field(True)
+    enable_login: bool = Field(False)
+
+    oidc_client_id: Optional[str]
+    oidc_secret: Optional[str]
+    oidc_discovery_url: str = Field('')
+    oidc_use_pkce: bool = Field(True)
+    oidc_scope: str = Field("openid email profile")
 
 @lru_cache()
 def meme_config_load(filepath: Optional[Path] = None) -> MemeConfig:

@@ -6,15 +6,26 @@ from io import BytesIO
 import json
 import os.path
 from pathlib import Path
-from typing import List, Union
+import random
+import string
+from typing import Callable, List, Optional, Tuple, Union
 import sys
+from authlib.integrations.starlette_client import OAuth, OAuthError
+from authlib.oauth2 import TokenAuth, ClientAuth
+
+from loguru import logger
 
 import aioboto3  # type: ignore
 from botocore.exceptions import ClientError
 import click
-from fastapi import FastAPI
+from fastapi import Request, Depends, FastAPI, HTTPException, status
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
+
+from starlette.responses import RedirectResponse
+from starlette.config import Config
+from starlette.middleware.sessions import SessionMiddleware
+
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 import jinja2.exceptions
@@ -25,31 +36,104 @@ import uvicorn
 from .sessions import get_aioboto3_session
 from .config import meme_config_load
 from .constants import THUMBNAIL_BUCKET_PREFIX, THUMBNAIL_DIMENSIONS
+from .models import ImageList, ThumbnailData
 from .utils import default_page_render_context, save_thumbnail
 
+# TODO: store a randomized secret in a file
+SESSION_SECRET = 'REPLACE WITH A PROPER SECRET OF YOUR CHOICE'
 
 CSS_BASEDIR = Path(f"{os.path.dirname(__file__)}/css/").resolve().as_posix()
 IMAGES_BASEDIR = Path(f"{os.path.dirname(__file__)}/images/").resolve().as_posix()
 JS_BASEDIR = Path(f"{os.path.dirname(__file__)}/js/").resolve().as_posix()
 
 app = FastAPI()
-app.add_middleware(GZipMiddleware, minimum_size=1000)
+# app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# add session middleware (this is used internally by starlette to execute the authorization flow)
+app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET,
+                   max_age=60 * 60 * 24 * 7)  # one week, in seconds
 
 
+starlette_config = Config(environ={})  # you could also read the client ID and secret from a .env file
+oauth = OAuth(starlette_config)
+if meme_config_load().oidc_client_id is not None:
+    memeconfig = meme_config_load()
+    if memeconfig.oidc_secret is None:
+        raise ValueError("Please configure a secret for OIDC")
+    if memeconfig.oidc_discovery_url is None:
+        raise ValueError("Please configure a discovery URL for OIDC")
 
-class ImageList(BaseModel):
-    """ list of images from the filesystem """
-    images: List[str]
+    client_kwargs = {
+        'scope': memeconfig.oidc_scope,
+    }
+    if memeconfig.oidc_use_pkce:
+        client_kwargs["code_challenge_method"] = "S256" # use PKCE
 
-class ThumbnailData(BaseModel):
-    """data returned from generate_thumbnail"""
-    hash: str
-    reader: BytesIO
+    oauth.register(  # this allows us to call oauth.discord later on
+        'oauth2',
+        scope=memeconfig.oidc_scope,
+        client_id=memeconfig.oidc_client_id,
+        client_secret=memeconfig.oidc_secret,
+        server_metadata_url=memeconfig.oidc_discovery_url,
+        client_kwargs=client_kwargs
+    )
 
-    # pylint: disable=too-few-public-methods
-    class Config:
-        """ config sub-class"""
-        arbitrary_types_allowed = True
+
+# define the endpoints for the OAuth2 flow
+@app.get('/login')
+async def login(request: Request):
+    """OAuth2 flow, step 1: have the user log into Discord to obtain an authorization code grant
+    """
+    return await oauth.oauth2.authorize_redirect(request, str(request.url_for('auth')))
+
+@app.get('/logout')
+async def logout(request: Request):
+    """ nuke the login session    """
+    if "token" in request.session:
+        request.session.pop("token")
+    request.session.clear()
+    return RedirectResponse(url='/')
+
+@app.get('/auth')
+@logger.catch
+async def auth(request: Request):
+    """OAuth2 flow, step 2: exchange the authorization code for access token
+    """
+
+    # exchange auth code for token
+    try:
+        print(f"request {dir(request)}", file=sys.stderr)
+
+        token = await oauth.oauth2.authorize_access_token(request)
+        print(token.get("userinfo"), file=sys.stderr)
+    except OAuthError as error:
+        return HTMLResponse(f'<h3>{error.error}</h3><a href="/">Back</a>')
+
+    # you now have an auth token. Do whatever you need with it
+    request.session.update({"token": token })
+    return RedirectResponse(url='/')
+
+@app.get("/admin")
+async def get_admin(request: Request):
+    """ admin page, protected by admin"""
+    token = request.session.get("token")
+    if token is None:
+        return RedirectResponse(url=request.url_for('login'))
+    if token:
+        print(f"Token! {token}", file=sys.stderr)
+        jinja2_env = Environment(
+            loader=PackageLoader(package_name="memes_api", package_path="./templates"),
+            autoescape=select_autoescape(),
+        )
+        try:
+            template = jinja2_env.get_template("admin.html")
+            context = default_page_render_context()
+            new_filecontents = template.render(**context)
+            return HTMLResponse(new_filecontents)
+
+        except jinja2.exceptions.TemplateNotFound as template_error:
+            print(f"Failed to load template: {template_error}", file=sys.stderr)
+        return HTMLResponse("Something went wrong, sorry.", status_code=500)
 
 @app.get("/allimages")
 async def get_allimages() -> ImageList:
@@ -323,7 +407,7 @@ async def get_healthcheck() -> HTMLResponse:
 
 
 @app.get("/", response_model=None)
-async def get_homepage() -> HTMLResponse:  # pylint: disable=invalid-name
+async def get_homepage(request: Request) -> HTMLResponse:  # pylint: disable=invalid-name
     """homepage"""
     jinja2_env = Environment(
         loader=PackageLoader(package_name="memes_api", package_path="./templates"),
@@ -332,7 +416,9 @@ async def get_homepage() -> HTMLResponse:  # pylint: disable=invalid-name
     try:
         template = jinja2_env.get_template("index.html")
         context = default_page_render_context()
-        context["enable_search"] = True
+        if request.session.get('token'):
+            context["logged_in"] = True
+
         new_filecontents = template.render(**context)
         return HTMLResponse(new_filecontents)
 
@@ -343,6 +429,8 @@ async def get_homepage() -> HTMLResponse:  # pylint: disable=invalid-name
 
 @click.command()
 @click.option("--host", type=str, default="0.0.0.0")
+@click.option("--ssl-keyfile", type=str)
+@click.option("--ssl-certfile", type=str)
 @click.option("--port", type=int, default=8000)
 @click.option("--proxy-headers", is_flag=True, help="Turn on proxy headers")
 @click.option("--reload", is_flag=True)
@@ -351,6 +439,8 @@ def cli(
     port: int = 8000,
     proxy_headers: bool = False,
     reload: bool = False,
+    ssl_keyfile: Optional[str] = None,
+    ssl_certfile: Optional[str] = None,
 ) -> None:
     """server"""
     print(f"{proxy_headers=}", file=sys.stderr)
@@ -362,6 +452,10 @@ def cli(
         "port": port,
         "proxy_headers": proxy_headers,
     }
+    if ssl_keyfile is not None:
+        uvicorn_args["ssl_keyfile"] = ssl_keyfile
+    if ssl_certfile is not None:
+        uvicorn_args["ssl_certfile"] = ssl_certfile
     if proxy_headers:
         uvicorn_args["forwarded_allow_ips"] = "*"
     uvicorn.run(**uvicorn_args) #type: ignore
