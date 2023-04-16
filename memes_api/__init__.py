@@ -6,12 +6,9 @@ from io import BytesIO
 import json
 import os.path
 from pathlib import Path
-import random
-import string
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable,  Optional,  Union
 import sys
 from authlib.integrations.starlette_client import OAuth, OAuthError
-from authlib.oauth2 import TokenAuth, ClientAuth
 
 from loguru import logger
 
@@ -30,7 +27,6 @@ from starlette.middleware.sessions import SessionMiddleware
 from jinja2 import Environment, PackageLoader, select_autoescape
 import jinja2.exceptions
 from PIL import Image
-from pydantic import BaseModel
 import uvicorn
 
 from .sessions import get_aioboto3_session
@@ -47,7 +43,7 @@ IMAGES_BASEDIR = Path(f"{os.path.dirname(__file__)}/images/").resolve().as_posix
 JS_BASEDIR = Path(f"{os.path.dirname(__file__)}/js/").resolve().as_posix()
 
 app = FastAPI()
-# app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # add session middleware (this is used internally by starlette to execute the authorization flow)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET,
@@ -89,10 +85,26 @@ async def login(request: Request):
 @app.get('/logout')
 async def logout(request: Request):
     """ nuke the login session    """
-    if "token" in request.session:
-        request.session.pop("token")
+    # oauth.oauth2.logout(request)
+    # if "token" in request.session:
+        # request.session.pop("token")
+    # request.session.clear()
     request.session.clear()
-    return RedirectResponse(url='/')
+    print(dir(oauth.oauth2))
+    jinja2_env = Environment(
+        loader=PackageLoader(package_name="memes_api", package_path="./templates"),
+        autoescape=select_autoescape(),
+    )
+    try:
+        template = jinja2_env.get_template("logout.html")
+        context = default_page_render_context()
+        new_filecontents = template.render(**context)
+        return HTMLResponse(new_filecontents)
+
+    # TODO: include a http redirect meta tag to redirect to the main page
+    except jinja2.exceptions.TemplateNotFound as template_error:
+        print(f"Failed to load template: {template_error}", file=sys.stderr)
+    return HTMLResponse("Something went wrong, sorry.", status_code=500)
 
 @app.get('/auth')
 @logger.catch
@@ -416,7 +428,7 @@ async def get_homepage(request: Request) -> HTMLResponse:  # pylint: disable=inv
     try:
         template = jinja2_env.get_template("index.html")
         context = default_page_render_context()
-        if request.session.get('token'):
+        if request.session.get('token') is not None:
             context["logged_in"] = True
 
         new_filecontents = template.render(**context)
