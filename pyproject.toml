@@ -25,7 +25,7 @@ pytest = "^7.3.1"
 mypy = "^1.2"
 black = "^23.3.0"
 pylint-pydantic = "^0.1.8"
-requests = "^2.29.0"
+requests = "^2.30.0"
 boto3-stubs = "^1.26.122"
 httpx = "^0.24.0"
 
