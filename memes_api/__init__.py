@@ -5,8 +5,10 @@ from hashlib import sha1
 from io import BytesIO
 import json
 import os.path
+import random
+import string
 from pathlib import Path
-from typing import Callable,  Optional,  Union
+from typing import Optional,  Union
 import sys
 from authlib.integrations.starlette_client import OAuth, OAuthError
 
@@ -36,7 +38,7 @@ from .models import ImageList, ThumbnailData
 from .utils import default_page_render_context, save_thumbnail
 
 # TODO: store a randomized secret in a file
-SESSION_SECRET = 'REPLACE WITH A PROPER SECRET OF YOUR CHOICE'
+SESSION_SECRET = random.sample(string.ascii_letters + string.digits, 32)
 
 CSS_BASEDIR = Path(f"{os.path.dirname(__file__)}/css/").resolve().as_posix()
 IMAGES_BASEDIR = Path(f"{os.path.dirname(__file__)}/images/").resolve().as_posix()
