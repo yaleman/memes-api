@@ -10,7 +10,7 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.9"
 Pillow = "^9.5.0"
-fastapi = "^0.98.0"
+fastapi = "^0.100.0"
 uvicorn = "0.22.0"
 pydantic = "^1.10.11"
 Jinja2 = "^3.1.1"
