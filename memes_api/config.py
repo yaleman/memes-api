@@ -20,8 +20,8 @@ class MemeConfig(BaseModel):
     enable_search: bool = Field(True)
     enable_login: bool = Field(False)
 
-    oidc_client_id: Optional[str]
-    oidc_secret: Optional[str]
+    oidc_client_id: Optional[str] = None
+    oidc_secret: Optional[str] = None
     oidc_discovery_url: str = Field("")
     oidc_use_pkce: bool = Field(True)
     oidc_scope: str = Field("openid email profile")
