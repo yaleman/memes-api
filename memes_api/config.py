@@ -22,9 +22,10 @@ class MemeConfig(BaseModel):
 
     oidc_client_id: Optional[str]
     oidc_secret: Optional[str]
-    oidc_discovery_url: str = Field('')
+    oidc_discovery_url: str = Field("")
     oidc_use_pkce: bool = Field(True)
     oidc_scope: str = Field("openid email profile")
+
 
 @lru_cache()
 def meme_config_load(filepath: Optional[Path] = None) -> MemeConfig:
@@ -35,7 +36,7 @@ def meme_config_load(filepath: Optional[Path] = None) -> MemeConfig:
     returning the result of parsing the first one found."""
     if filepath is not None:
         if filepath.exists():
-            return MemeConfig.parse_file(filepath.expanduser().resolve())
+            MemeConfig.model_validate_json(filepath.read_text(encoding="utf-8"))
         raise FileNotFoundError(f"Couldn't find {filepath}")
     for testpath in [
         "~/.config/memes-api.json",
@@ -44,5 +45,5 @@ def meme_config_load(filepath: Optional[Path] = None) -> MemeConfig:
     ]:
         filepath = Path(testpath).expanduser().resolve()
         if filepath.exists():
-            return MemeConfig.parse_file(filepath.expanduser().resolve())
+            return MemeConfig.model_validate_json(filepath.read_text(encoding="utf-8"))
     raise FileNotFoundError(f"Couldn't find {filepath}")

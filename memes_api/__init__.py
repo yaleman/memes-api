@@ -8,7 +8,7 @@ import os.path
 import random
 import string
 from pathlib import Path
-from typing import Optional,  Union
+from typing import Optional, Union
 import sys
 from authlib.integrations.starlette_client import OAuth, OAuthError
 
@@ -48,11 +48,14 @@ app = FastAPI()
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # add session middleware (this is used internally by starlette to execute the authorization flow)
-app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET,
-                   max_age=60 * 60 * 24 * 7)  # one week, in seconds
+app.add_middleware(
+    SessionMiddleware, secret_key=SESSION_SECRET, max_age=60 * 60 * 24 * 7
+)  # one week, in seconds
 
 
-starlette_config = Config(environ={})  # you could also read the client ID and secret from a .env file
+starlette_config = Config(
+    environ={}
+)  # you could also read the client ID and secret from a .env file
 oauth = OAuth(starlette_config)
 if meme_config_load().oidc_client_id is not None:
     memeconfig = meme_config_load()
@@ -62,34 +65,34 @@ if meme_config_load().oidc_client_id is not None:
         raise ValueError("Please configure a discovery URL for OIDC")
 
     client_kwargs = {
-        'scope': memeconfig.oidc_scope,
+        "scope": memeconfig.oidc_scope,
     }
     if memeconfig.oidc_use_pkce:
-        client_kwargs["code_challenge_method"] = "S256" # use PKCE
+        client_kwargs["code_challenge_method"] = "S256"  # use PKCE
 
     oauth.register(  # this allows us to call oauth.discord later on
-        'oauth2',
+        "oauth2",
         scope=memeconfig.oidc_scope,
         client_id=memeconfig.oidc_client_id,
         client_secret=memeconfig.oidc_secret,
         server_metadata_url=memeconfig.oidc_discovery_url,
-        client_kwargs=client_kwargs
+        client_kwargs=client_kwargs,
     )
 
 
 # define the endpoints for the OAuth2 flow
-@app.get('/login')
+@app.get("/login")
 async def login(request: Request):
-    """OAuth2 flow, step 1: have the user log into Discord to obtain an authorization code grant
-    """
-    return await oauth.oauth2.authorize_redirect(request, str(request.url_for('auth')))
+    """OAuth2 flow, step 1: have the user log into Discord to obtain an authorization code grant"""
+    return await oauth.oauth2.authorize_redirect(request, str(request.url_for("auth")))
 
-@app.get('/logout')
+
+@app.get("/logout")
 async def logout(request: Request):
-    """ nuke the login session    """
+    """nuke the login session"""
     # oauth.oauth2.logout(request)
     # if "token" in request.session:
-        # request.session.pop("token")
+    # request.session.pop("token")
     # request.session.clear()
     request.session.clear()
     print(dir(oauth.oauth2))
@@ -108,11 +111,11 @@ async def logout(request: Request):
         print(f"Failed to load template: {template_error}", file=sys.stderr)
     return HTMLResponse("Something went wrong, sorry.", status_code=500)
 
-@app.get('/auth')
+
+@app.get("/auth")
 @logger.catch
 async def auth(request: Request):
-    """OAuth2 flow, step 2: exchange the authorization code for access token
-    """
+    """OAuth2 flow, step 2: exchange the authorization code for access token"""
 
     # exchange auth code for token
     try:
@@ -124,15 +127,16 @@ async def auth(request: Request):
         return HTMLResponse(f'<h3>{error.error}</h3><a href="/">Back</a>')
 
     # you now have an auth token. Do whatever you need with it
-    request.session.update({"token": token })
-    return RedirectResponse(url='/')
+    request.session.update({"token": token})
+    return RedirectResponse(url="/")
+
 
 @app.get("/admin")
 async def get_admin(request: Request):
-    """ admin page, protected by admin"""
+    """admin page, protected by admin"""
     token = request.session.get("token")
     if token is None:
-        return RedirectResponse(url=request.url_for('login'))
+        return RedirectResponse(url=request.url_for("login"))
     if token:
         print(f"Token! {token}", file=sys.stderr)
         jinja2_env = Environment(
@@ -149,6 +153,7 @@ async def get_admin(request: Request):
             print(f"Failed to load template: {template_error}", file=sys.stderr)
         return HTMLResponse("Something went wrong, sorry.", status_code=500)
 
+
 @app.get("/allimages")
 async def get_allimages() -> ImageList:
     """returns all the images"""
@@ -164,7 +169,8 @@ async def get_allimages() -> ImageList:
             "s3", endpoint_url=meme_config.endpoint_url
         ) as s3_resource:
             bucket = await s3_resource.Bucket(meme_config.bucket)
-            return ImageList(images=[
+            return ImageList(
+                images=[
                     image.key
                     async for image in bucket.objects.iterator()
                     if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX)
@@ -173,13 +179,13 @@ async def get_allimages() -> ImageList:
     else:
         async with session.resource("s3") as s3_resource:
             bucket = await s3_resource.Bucket(meme_config.bucket)
-            return ImageList(images=[
+            return ImageList(
+                images=[
                     image.key
                     async for image in bucket.objects.iterator()
                     if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX)
                 ]
             )
-
 
 
 def generate_thumbnail(content: bytes) -> ThumbnailData:
@@ -218,7 +224,6 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]
         "s3",
         endpoint_url=meme_config_load().endpoint_url,
     ) as s3_client:
-
         # try and get the pre-cached thumbnail
         try:
             image_object = await s3_client.get_object(
@@ -241,9 +246,9 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]
             else:
                 return HTMLResponse(status_code=404)
         except ClientError as error_message:
-            if error_message.response['Error']['Code'] == "NoSuchKey":
+            if error_message.response["Error"]["Code"] == "NoSuchKey":
                 response_status = 404
-                error_text=f"File not found '{filename}'"
+                error_text = f"File not found '{filename}'"
             else:
                 error_text = f"ClientError pulling '{filename}': {error_message}"
                 print(error_text, file=sys.stderr)
@@ -319,9 +324,9 @@ async def get_image(filename: str) -> Union[HTMLResponse, StreamingResponse]:
                 print("Couldn't find body!", file=sys.stderr)
                 return HTMLResponse(status_code=404)
         except ClientError as error_message:
-            if error_message.response['Error']['Code'] == "NoSuchKey":
+            if error_message.response["Error"]["Code"] == "NoSuchKey":
                 response_status = 404
-                error_text=f"File not found '{filename}'"
+                error_text = f"File not found '{filename}'"
             else:
                 response_status = 500
                 error_text = f"ClientError pulling '{filename}': {error_message}"
@@ -421,7 +426,9 @@ async def get_healthcheck() -> HTMLResponse:
 
 
 @app.get("/", response_model=None)
-async def get_homepage(request: Request) -> HTMLResponse:  # pylint: disable=invalid-name
+async def get_homepage(
+    request: Request,
+) -> HTMLResponse:  # pylint: disable=invalid-name
     """homepage"""
     jinja2_env = Environment(
         loader=PackageLoader(package_name="memes_api", package_path="./templates"),
@@ -430,7 +437,7 @@ async def get_homepage(request: Request) -> HTMLResponse:  # pylint: disable=inv
     try:
         template = jinja2_env.get_template("index.html")
         context = default_page_render_context()
-        if request.session.get('token') is not None:
+        if request.session.get("token") is not None:
             context["logged_in"] = True
 
         new_filecontents = template.render(**context)
@@ -472,4 +479,4 @@ def cli(
         uvicorn_args["ssl_certfile"] = ssl_certfile
     if proxy_headers:
         uvicorn_args["forwarded_allow_ips"] = "*"
-    uvicorn.run(**uvicorn_args) #type: ignore
+    uvicorn.run(**uvicorn_args)  # type: ignore
