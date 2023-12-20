@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from jinja2 import Environment, PackageLoader, select_autoescape
 import jinja2.exceptions
 from PIL import Image
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 import uvicorn
 
 from .sessions import get_aioboto3_session
@@ -36,20 +36,20 @@ app = FastAPI()
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
-
 class ImageList(BaseModel):
-    """ list of images from the filesystem """
+    """list of images from the filesystem"""
+
     images: List[str]
+
 
 class ThumbnailData(BaseModel):
     """data returned from generate_thumbnail"""
+
     hash: str
     reader: BytesIO
 
-    # pylint: disable=too-few-public-methods
-    class Config:
-        """ config sub-class"""
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
 
 @app.get("/allimages")
 async def get_allimages() -> ImageList:
@@ -66,7 +66,8 @@ async def get_allimages() -> ImageList:
             "s3", endpoint_url=meme_config.endpoint_url
         ) as s3_resource:
             bucket = await s3_resource.Bucket(meme_config.bucket)
-            return ImageList(images=[
+            return ImageList(
+                images=[
                     image.key
                     async for image in bucket.objects.iterator()
                     if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX)
@@ -75,13 +76,13 @@ async def get_allimages() -> ImageList:
     else:
         async with session.resource("s3") as s3_resource:
             bucket = await s3_resource.Bucket(meme_config.bucket)
-            return ImageList(images=[
+            return ImageList(
+                images=[
                     image.key
                     async for image in bucket.objects.iterator()
                     if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX)
                 ]
             )
-
 
 
 def generate_thumbnail(content: bytes) -> ThumbnailData:
@@ -120,7 +121,6 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]
         "s3",
         endpoint_url=meme_config_load().endpoint_url,
     ) as s3_client:
-
         # try and get the pre-cached thumbnail
         try:
             image_object = await s3_client.get_object(
@@ -143,9 +143,9 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]
             else:
                 return HTMLResponse(status_code=404)
         except ClientError as error_message:
-            if error_message.response['Error']['Code'] == "NoSuchKey":
+            if error_message.response["Error"]["Code"] == "NoSuchKey":
                 response_status = 404
-                error_text=f"File not found '{filename}'"
+                error_text = f"File not found '{filename}'"
             else:
                 error_text = f"ClientError pulling '{filename}': {error_message}"
                 print(error_text, file=sys.stderr)
@@ -221,9 +221,9 @@ async def get_image(filename: str) -> Union[HTMLResponse, StreamingResponse]:
                 print("Couldn't find body!", file=sys.stderr)
                 return HTMLResponse(status_code=404)
         except ClientError as error_message:
-            if error_message.response['Error']['Code'] == "NoSuchKey":
+            if error_message.response["Error"]["Code"] == "NoSuchKey":
                 response_status = 404
-                error_text=f"File not found '{filename}'"
+                error_text = f"File not found '{filename}'"
             else:
                 response_status = 500
                 error_text = f"ClientError pulling '{filename}': {error_message}"
@@ -364,4 +364,4 @@ def cli(
     }
     if proxy_headers:
         uvicorn_args["forwarded_allow_ips"] = "*"
-    uvicorn.run(**uvicorn_args) #type: ignore
+    uvicorn.run(**uvicorn_args)  # type: ignore

@@ -13,3 +13,8 @@ div.imagebox{
     text-align: center;
     background-image: url("/static/images/thumbnail_background.svg");
 }
+
+/* hides the vue things until the page has loaded */
+[v-cloak] {
+  display: none;
+}

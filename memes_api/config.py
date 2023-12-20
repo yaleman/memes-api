@@ -18,23 +18,27 @@ class MemeConfig(BaseModel):
     endpoint_url: Optional[str]
 
 
+CONFIG_FILES = [
+    "~/.config/memes-api.json",
+    "memes-api.json",
+    "/etc/memes-api.json",
+]
+
+
 @lru_cache()
 def meme_config_load(filepath: Optional[Path] = None) -> MemeConfig:
-    """config loader, returns a pydantic object, will try
-    ~/.config/memes-api.json,
-    memes-api.json,
-    /etc/memes-api.json in order,
-    returning the result of parsing the first one found."""
+    """Config loader, returns a pydantic object, will try the following in order, returning the result of parsing the first one found.
+
+    - `~/.config/memes-api.json`
+    - `memes-api.json`
+    - `/etc/memes-api.json`
+    """
     if filepath is not None:
         if filepath.exists():
-            return MemeConfig.parse_file(filepath.expanduser().resolve())
+            return MemeConfig.model_validate_json(filepath.read_text(encoding="utf-8"))
         raise FileNotFoundError(f"Couldn't find {filepath}")
-    for testpath in [
-        "~/.config/memes-api.json",
-        "memes-api.json",
-        "/etc/memes-api.json",
-    ]:
+    for testpath in CONFIG_FILES:
         filepath = Path(testpath).expanduser().resolve()
         if filepath.exists():
-            return MemeConfig.parse_file(filepath.expanduser().resolve())
+            return MemeConfig.model_validate_json(filepath.read_text(encoding="utf-8"))
     raise FileNotFoundError(f"Couldn't find {filepath}")

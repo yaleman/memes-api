@@ -2,31 +2,34 @@
 
 {% block content %}
 
-    <template v-for="image in paginatedImages" :key="image">
-    <a :href="'/image_info/'+image" >
+<template v-for="image in paginatedImages" :key="image">
+    <a :href="'/image_info/'+image">
         <div class="imagebox">
-            <img :src="'/thumbnail/'+image" :title=image :alt=image class="imagebox"/>
+            <img :src="'/thumbnail/'+image" :title=image :alt=image
+                class="imagebox" />
         </div>
     </a>
-    </template>
+</template>
 
-    <div id="app">
-        <paginate
-            v-model="currentPage"
-            :page-count="pageCount"
-            :container-class="'pagination  justify-content-center'"
-            :prev-text="'<<'"
-            :next-text="'>>'"
-            :click-handler="clickCallback"
-        >
-        </paginate>
-      </div>
+<div v-if="!images">
+    Waiting for the API response...
+</div>
+<div id="app" v-if="images">
+    <paginate
+        v-model="currentPage"
+        :page-count="pageCount"
+        :container-class="'pagination  justify-content-center'"
+        :prev-text="'<<'"
+        :next-text="'>>'"
+        :click-handler="clickCallback">
+    </paginate>
+</div>
 
 <div class="container">
-
     <div class="row">
-        <div class="col">
-        Currently displaying |count_filteredImages| out of |totalImages| total images.
+        <div class="col" v-cloak>
+            Currently displaying |count_filteredImages| out of |totalImages|
+            total images.
         </div>
     </div>
 </div>
