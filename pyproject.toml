@@ -21,7 +21,7 @@ aioboto3 = "^9.4.0"
 
 [tool.poetry.dev-dependencies]
 pylint = "^3.2.7"
-pytest = "^8.3.2"
+pytest = "^8.3.3"
 mypy = "^1.11"
 black = "^24.8.0"
 pylint-pydantic = "^0.3.1"
