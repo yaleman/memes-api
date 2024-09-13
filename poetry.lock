@@ -317,13 +317,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "boto3-stubs"
-version = "1.35.13.post1"
-description = "Type annotations for boto3 1.35.13 generated with mypy-boto3-builder 8.0.1"
+version = "1.35.18"
+description = "Type annotations for boto3 1.35.18 generated with mypy-boto3-builder 8.0.1"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "boto3_stubs-1.35.13.post1-py3-none-any.whl", hash = "sha256:7be9a5006d623092f45c19d06000f99cf39e84d7e4002efb0b91a7db25429aaf"},
-    {file = "boto3_stubs-1.35.13.post1.tar.gz", hash = "sha256:8a88a189d37c3323dff6b5a6cfe1fe9b1f4c219512837300e581716e46d0eaea"},
+    {file = "boto3_stubs-1.35.18-py3-none-any.whl", hash = "sha256:60238c6664cef9fb1cc2d202f0b41df339f993787777abdbc31b590f22fbecd3"},
+    {file = "boto3_stubs-1.35.18.tar.gz", hash = "sha256:da1c449efaf685b720c54a5c5bdfbe668451e2b6764aa704dcfe3f69226173f0"},
 ]
 
 [package.dependencies]
@@ -374,7 +374,7 @@ bedrock-agent = ["mypy-boto3-bedrock-agent (>=1.35.0,<1.36.0)"]
 bedrock-agent-runtime = ["mypy-boto3-bedrock-agent-runtime (>=1.35.0,<1.36.0)"]
 bedrock-runtime = ["mypy-boto3-bedrock-runtime (>=1.35.0,<1.36.0)"]
 billingconductor = ["mypy-boto3-billingconductor (>=1.35.0,<1.36.0)"]
-boto3 = ["boto3 (==1.35.13)", "botocore (==1.35.13)"]
+boto3 = ["boto3 (==1.35.18)", "botocore (==1.35.18)"]
 braket = ["mypy-boto3-braket (>=1.35.0,<1.36.0)"]
 budgets = ["mypy-boto3-budgets (>=1.35.0,<1.36.0)"]
 ce = ["mypy-boto3-ce (>=1.35.0,<1.36.0)"]
@@ -482,7 +482,6 @@ forecastquery = ["mypy-boto3-forecastquery (>=1.35.0,<1.36.0)"]
 frauddetector = ["mypy-boto3-frauddetector (>=1.35.0,<1.36.0)"]
 freetier = ["mypy-boto3-freetier (>=1.35.0,<1.36.0)"]
 fsx = ["mypy-boto3-fsx (>=1.35.0,<1.36.0)"]
-full = ["boto3-stubs-full"]
 gamelift = ["mypy-boto3-gamelift (>=1.35.0,<1.36.0)"]
 glacier = ["mypy-boto3-glacier (>=1.35.0,<1.36.0)"]
 globalaccelerator = ["mypy-boto3-globalaccelerator (>=1.35.0,<1.36.0)"]
@@ -2113,4 +2112,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "644ddfe53882894f757eb03051e6f0c5f08cc71675674e2667533735fa0f12e3"
+content-hash = "adb010f18fa43cfa6c90e56d980bf3b9658f007f3b6aeb4bbe75ef59ccaad115"
