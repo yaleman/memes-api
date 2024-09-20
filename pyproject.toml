@@ -20,7 +20,7 @@ aiobotocore = "^2.1.2"
 aioboto3 = "^9.4.0"
 
 [tool.poetry.dev-dependencies]
-pylint = "^3.2.7"
+pylint = "^3.3.0"
 pytest = "^8.3.3"
 mypy = "^1.11"
 black = "^24.8.0"
