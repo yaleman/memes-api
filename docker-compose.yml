@@ -1,6 +1,4 @@
 ---
-version: '3.8'
-
 services:
   memes:
     build: .
@@ -18,4 +16,5 @@ services:
       - "127.0.0.1:11707:11707"
     volumes:
       - "${HOME}/.config/memes-api.json:/root/.config/memes-api.json"
-    restart: always
+    # don't keep restarting it over and over
+    restart: on-failure:5
