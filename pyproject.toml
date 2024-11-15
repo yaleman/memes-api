@@ -26,7 +26,7 @@ mypy = "^1.13"
 black = "^24.10.0"
 pylint-pydantic = "^0.3.1"
 requests = "^2.32.3"
-boto3-stubs = "^1.35.56"
+boto3-stubs = "^1.35.62"
 httpx = "^0.27.2"
 
 [tool.poetry.scripts]
