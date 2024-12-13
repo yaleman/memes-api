@@ -332,13 +332,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "boto3-stubs"
-version = "1.35.76"
-description = "Type annotations for boto3 1.35.76 generated with mypy-boto3-builder 8.5.0"
+version = "1.35.80"
+description = "Type annotations for boto3 1.35.80 generated with mypy-boto3-builder 8.6.3"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "boto3_stubs-1.35.76-py3-none-any.whl", hash = "sha256:882f69f02cca48176fa3adf7f354fe64a65268423c9696871d0f4d098af35431"},
-    {file = "boto3_stubs-1.35.76.tar.gz", hash = "sha256:32109b6a0c9720bf7c2e389655479c6dab4ee33c622e2cf2746c9e5ec527bae3"},
+    {file = "boto3_stubs-1.35.80-py3-none-any.whl", hash = "sha256:a71b7dbae835ac045703282001a7f35b284c3c5c82e083b8804494516e23c028"},
+    {file = "boto3_stubs-1.35.80.tar.gz", hash = "sha256:b0d1034cce5c666176991b3be93f084c51c5745d054f756c533cde46bf25acf3"},
 ]
 
 [package.dependencies]
@@ -393,7 +393,7 @@ bedrock-data-automation-runtime = ["mypy-boto3-bedrock-data-automation-runtime (
 bedrock-runtime = ["mypy-boto3-bedrock-runtime (>=1.35.0,<1.36.0)"]
 billing = ["mypy-boto3-billing (>=1.35.0,<1.36.0)"]
 billingconductor = ["mypy-boto3-billingconductor (>=1.35.0,<1.36.0)"]
-boto3 = ["boto3 (==1.35.76)", "botocore (==1.35.76)"]
+boto3 = ["boto3 (==1.35.80)"]
 braket = ["mypy-boto3-braket (>=1.35.0,<1.36.0)"]
 budgets = ["mypy-boto3-budgets (>=1.35.0,<1.36.0)"]
 ce = ["mypy-boto3-ce (>=1.35.0,<1.36.0)"]
@@ -504,7 +504,7 @@ forecastquery = ["mypy-boto3-forecastquery (>=1.35.0,<1.36.0)"]
 frauddetector = ["mypy-boto3-frauddetector (>=1.35.0,<1.36.0)"]
 freetier = ["mypy-boto3-freetier (>=1.35.0,<1.36.0)"]
 fsx = ["mypy-boto3-fsx (>=1.35.0,<1.36.0)"]
-full = ["boto3-stubs-full"]
+full = ["boto3-stubs-full (>=1.35.0,<1.36.0)"]
 gamelift = ["mypy-boto3-gamelift (>=1.35.0,<1.36.0)"]
 geo-maps = ["mypy-boto3-geo-maps (>=1.35.0,<1.36.0)"]
 geo-places = ["mypy-boto3-geo-places (>=1.35.0,<1.36.0)"]
@@ -2243,4 +2243,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "ab0563f28a3b54ab492e7224a90d9e5594bc9425562ddbd1aff7e44bef8f7ff2"
+content-hash = "d9cf161b7bde4acfc0960813d2b2368ab52b2fe48b103396da698ad8ba8ac99a"
