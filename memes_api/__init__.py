@@ -1,9 +1,10 @@
-""" Memes API """
+"""Memes API"""
 
 from hashlib import sha1
 
 from io import BytesIO
 import json
+import logging
 import os.path
 from pathlib import Path
 from typing import List, Union
@@ -31,6 +32,17 @@ from .utils import default_page_render_context, save_thumbnail
 CSS_BASEDIR = Path(f"{os.path.dirname(__file__)}/css/").resolve().as_posix()
 IMAGES_BASEDIR = Path(f"{os.path.dirname(__file__)}/images/").resolve().as_posix()
 JS_BASEDIR = Path(f"{os.path.dirname(__file__)}/js/").resolve().as_posix()
+
+
+def setup_logging(level: int = logging.DEBUG) -> None:
+    logging.basicConfig(
+        format="%(asctime)s %(levelname)s %(message)s",
+        level=level,
+        handlers=[
+            logging.StreamHandler(sys.stderr),
+        ],
+    )
+
 
 app = FastAPI()
 app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -61,28 +73,34 @@ async def get_allimages() -> ImageList:
         region_name=meme_config.aws_region,
     )
 
-    if meme_config.endpoint_url is not None:
-        async with session.resource(
-            "s3", endpoint_url=meme_config.endpoint_url
-        ) as s3_resource:
-            bucket = await s3_resource.Bucket(meme_config.bucket)
-            return ImageList(
-                images=[
-                    image.key
-                    async for image in bucket.objects.iterator()
-                    if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX)
-                ]
-            )
-    else:
-        async with session.resource("s3") as s3_resource:
-            bucket = await s3_resource.Bucket(meme_config.bucket)
-            return ImageList(
-                images=[
-                    image.key
-                    async for image in bucket.objects.iterator()
-                    if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX)
-                ]
-            )
+    try:
+        if meme_config.endpoint_url is not None:
+            async with session.resource(
+                "s3", endpoint_url=meme_config.endpoint_url
+            ) as s3_resource:
+                bucket = await s3_resource.Bucket(meme_config.bucket)
+                return ImageList(
+                    images=[
+                        image.key
+                        async for image in bucket.objects.iterator()
+                        if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX)
+                    ]
+                )
+        else:
+            async with session.resource("s3") as s3_resource:
+                bucket = await s3_resource.Bucket(meme_config.bucket)
+                return ImageList(
+                    images=[
+                        image.key
+                        async for image in bucket.objects.iterator()
+                        if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX)
+                    ]
+                )
+    except ClientError as error:
+        if error.response.get("Error", {}).get("Code") == "NoSuchBucket":
+            return ImageList(images=[])
+        logging.error("ClientError pulling images: %s", error)
+        return ImageList(images=[])
 
 
 def generate_thumbnail(content: bytes) -> ThumbnailData:
@@ -143,11 +161,12 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]
             else:
                 return HTMLResponse(status_code=404)
         except ClientError as error_message:
-            if error_message.response["Error"]["Code"] == "NoSuchKey":
+            error_code = error_message.response.get("Error", {}).get("Code")
+            if error_code in ["404", "NoSuchKey"]:
                 response_status = 404
                 error_text = f"File not found '{filename}'"
             else:
-                error_text = f"ClientError pulling '{filename}': {error_message}"
+                error_text = f"ClientError pulling image for thumbnail '{filename}': {error_message}"
                 print(error_text, file=sys.stderr)
                 response_status = 500
                 if "ResponseMetadata" in error_message.response:
@@ -179,6 +198,26 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]
 @app.get("/image_info/{filename}", response_model=None)
 async def get_image_info(filename: str) -> HTMLResponse:
     """gets the image info page"""
+
+    meme_config = meme_config_load()
+    session = get_aioboto3_session()
+
+    async with session.client("s3", endpoint_url=meme_config.endpoint_url) as s3_client:
+        try:
+            await s3_client.head_object(Bucket=meme_config.bucket, Key=filename)
+        except ClientError as error_message:
+            error_code = error_message.response.get("Error", {}).get("Code")
+            if error_code == "404":
+                status_code = 404
+                error_text = f"File not found '{filename}'"
+            else:
+                logging.error(
+                    "error accessing /image_info/%s - %s", filename, error_message
+                )
+                status_code = 500
+                error_text = "Something in the backend broke!"
+            return HTMLResponse(error_text, status_code=status_code)
+
     jinja2_env = Environment(
         loader=PackageLoader(package_name="memes_api", package_path="./templates"),
         autoescape=select_autoescape(),
@@ -188,12 +227,12 @@ async def get_image_info(filename: str) -> HTMLResponse:
 
         context = default_page_render_context()
         context["image"] = filename
-        context[
-            "og_image"
-        ] = f"{context['baseurl']}/thumbnail/{filename.replace(' ', '%20')}"
-        context[
-            "image_url"
-        ] = f"{context['baseurl']}/image/{filename.replace(' ', '%20')}"
+        context["og_image"] = (
+            f"{context['baseurl']}/thumbnail/{filename.replace(' ', '%20')}"
+        )
+        context["image_url"] = (
+            f"{context['baseurl']}/image/{filename.replace(' ', '%20')}"
+        )
         context["page_title"] = f"Memes! - {filename}"
         new_filecontents = template.render(**context)
         return HTMLResponse(new_filecontents)
@@ -221,7 +260,7 @@ async def get_image(filename: str) -> Union[HTMLResponse, StreamingResponse]:
                 print("Couldn't find body!", file=sys.stderr)
                 return HTMLResponse(status_code=404)
         except ClientError as error_message:
-            if error_message.response["Error"]["Code"] == "NoSuchKey":
+            if error_message.response.get("Error", {}).get("Code") == "NoSuchKey":
                 response_status = 404
                 error_text = f"File not found '{filename}'"
             else:
@@ -246,7 +285,9 @@ async def get_js_by_filename(filename: str) -> Union[FileResponse, HTMLResponse]
     """return a js file"""
     filepath = Path(f"{os.path.dirname(__file__)}/js/{filename}").resolve()
     if not filepath.exists() or not filepath.is_file():
-        print(f"Can't find {filepath.as_posix()}")
+        logging.debug(
+            f"Can't find {filepath.as_posix()} in /static/js/{filename} request"
+        )
         return HTMLResponse(status_code=404)
 
     if JS_BASEDIR not in filepath.as_posix():
@@ -346,15 +387,23 @@ async def get_homepage() -> HTMLResponse:  # pylint: disable=invalid-name
 @click.option("--port", type=int, default=8000)
 @click.option("--proxy-headers", is_flag=True, help="Turn on proxy headers")
 @click.option("--reload", is_flag=True)
+@click.option("--debug", is_flag=True)
 def cli(
     host: str = "0.0.0.0",
     port: int = 8000,
     proxy_headers: bool = False,
     reload: bool = False,
+    debug: bool = False,
 ) -> None:
     """server"""
-    print(f"{proxy_headers=}", file=sys.stderr)
-    print(f"{reload=}", file=sys.stderr)
+    if debug:
+        setup_logging(logging.DEBUG)
+    else:
+        setup_logging(logging.INFO)
+
+    logging.debug(f"{proxy_headers=}")
+    logging.debug(f"{reload=}")
+    logging.debug(f"{debug=}")
     uvicorn_args = {
         "app": "memes_api:app",
         "reload": reload,

@@ -1,21 +1,20 @@
 ---
-version: '3.8'
-
 services:
   memes:
     build: .
     container_name: memes_api
     healthcheck:
-      test: ["CMD", "memes-healthcheck", "http://127.0.0.1:11707/up"]
+      test: ["CMD", "memes-healthcheck", "http://127.0.0.1:9000/up"]
       interval: 60s
       timeout: 1s
       retries: 5
     image: ghcr.io/yaleman/memes-api:latest
-    command: ["memes-api", "--host", "0.0.0.0", "--port", "11707", "--proxy-headers"]
-    labels:
-      com.centurylinklabs.watchtower.enable: true
+    command: ["memes-api", "--host", "0.0.0.0", "--port", "9000", "--proxy-headers"]
+    # labels:
+      # com.centurylinklabs.watchtower.enable: true
     ports:
-      - "127.0.0.1:11707:11707"
+      - "127.0.0.1:9000:9000"
     volumes:
-      - "${HOME}/.config/memes-api.json:/root/.config/memes-api.json"
-    restart: always
+      - "${HOME}/.config/memes-api.json:/home/memes/.config/memes-api.json"
+    # don't keep restarting it over and over
+    restart: on-failure:5

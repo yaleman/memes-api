@@ -1,9 +1,8 @@
-name: pylint
+---
+name: Linting
 
 "on":
   push:
-    branches:
-      - main  # Set a branch to deploy
   pull_request:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,13 +14,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
-      - name: Set up Python 3.9
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.13'
       - name: Running tests
         run: |
-            python -m pip install --quiet --no-cache-dir --upgrade poetry
-            poetry install
-            poetry run pylint $(basename $(pwd) | sed -E 's/-/_/g')
-            poetry run pylint tests/
+          python -m pip install --quiet --no-cache-dir --upgrade uv
+          uv run ruff check tests memes_api

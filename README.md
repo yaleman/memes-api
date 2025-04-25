@@ -6,7 +6,7 @@ A memes API thing
 
 Install this library using `pip`:
 
-    $ python -m pip install git+https://github.com/yaleman/memes-api
+    python -m pip install git+https://github.com/yaleman/memes-api
 
 ## Usage
 
@@ -17,4 +17,4 @@ python -m memes_api
 To contribute to this library, first checkout the code. Then create a new virtual environment:
 
     cd memes-api
-    poetry install
+    uv venv

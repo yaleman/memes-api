@@ -1,4 +1,5 @@
-name: Run pytest
+---
+name: Run test and coverage
 
 "on":
   push:
@@ -8,20 +9,21 @@ concurrency:
   cancel-in-progress: true
 jobs:
   pytest:
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
-      - name: Set up Python 3.10
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.13'
+      - uses: extractions/setup-just@v2
       - name: Running pytest
         run: |
-          python --version
-          python -m pip install --quiet --no-cache-dir --upgrade poetry
-          poetry install
+          python -m pip install --quiet --no-cache-dir --upgrade uv
           cp tests/test_config.json ./memes-api.json
-          poetry run python -m pytest
-
+          just coverage
+      

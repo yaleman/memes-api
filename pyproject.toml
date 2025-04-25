@@ -1,35 +1,24 @@
-[tool.poetry]
+
+[project]
 name = "memes-api"
-version = "0.0.3"
 description = "A memes API"
-authors = [
-    "James Hogkinson <james@terminaloutcomes.com>",
+license = { text = "MPL 2.0" }
+version = "0.0.4"
+authors = [{ name = "James Hogkinson", email = "james@terminaloutcomes.com" }]
+requires-python = "<4.0,>=3.13"
+dependencies = [
+    "aioboto3>=14.1.0",
+    "aiobotocore>=2.21.1",
+    "click>=8.1.8",
+    "fastapi>=0.115.12",
+    "Jinja2>=3.1.6",
+    "Pillow>=11.2.1",
+    "pydantic>=2.11.3",
+    "types-Pillow>=10.2.0",
+    "uvicorn==0.34.2",
 ]
-license = "MIT"
 
-[tool.poetry.dependencies]
-python = "^3.9"
-Pillow = "^11.2.1"
-fastapi = "^0.115.12"
-uvicorn = "0.34.1"
-pydantic = "^2.11.3"
-Jinja2 = "^3.1.6"
-click = "^8.1.8"
-types-Pillow = "^10.2.0"
-aiobotocore = "^2.1.2"
-aioboto3 = "^9.4.0"
-
-[tool.poetry.dev-dependencies]
-pylint = "^3.3.6"
-pytest = "^8.3.5"
-mypy = "^1.15"
-black = "^25.1.0"
-pylint-pydantic = "^0.3.5"
-requests = "^2.32.3"
-boto3-stubs = "^1.37.36"
-httpx = "^0.28.1"
-
-[tool.poetry.scripts]
+[project.scripts]
 memes-api = "memes_api.__main__:cli"
 memes-healthcheck = "memes_api.healthcheck:cli"
 
@@ -37,20 +26,24 @@ memes-healthcheck = "memes_api.healthcheck:cli"
 plugins = "pydantic.mypy"
 
 [build-system]
-requires = [
-    "poetry-core>=1.0.0",
-]
-build-backend = "poetry.core.masonry.api"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
 
-[project]
-name = "memes-api"
-description = "A memes API"
-license = "MIT"
-version = "0.0.2"
-authors = [
-    { name = "James Hogkinson", email = "james@terminaloutcomes.com" },
+
+[dependency-groups]
+dev = [
+    "boto3-stubs>=1.37.36",
+    "coverage>=7.8.0",
+    "coveralls>=4.0.1",
+    "httpx>=0.28.1",
+    "mypy>=1.15.0",
+    "pylint-pydantic>=0.3.5",
+    "pyright>=1.1.400",
+    "pytest>=8.3.5",
+    "ruff>=0.11.7",
+    "types-pillow>=10.2.0.20240822",
 ]
 
-[project.scripts]
-memes-api = "memes_api.__main__:cli"
-memes-healthcheck = "memes_api.healthcheck:cli"
+
+[tool.coverage.run]
+omit = ["tests/*"]
