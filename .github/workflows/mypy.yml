@@ -23,4 +23,4 @@ jobs:
         run: |
           python --version
           python -m pip install --quiet --no-cache-dir --upgrade uv
-          uv run mypy --strict memes-api tests
+          uv run mypy --strict memes_api tests
