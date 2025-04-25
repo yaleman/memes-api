@@ -20,7 +20,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v3
       - name: Running pytest
         run: |
           python -m pip install --quiet --no-cache-dir --upgrade uv
