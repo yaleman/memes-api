@@ -1,6 +1,6 @@
 default: checks
 
-checks: lint mypy test
+checks: lint types test
 
 coverage:
     uv run coverage run -m pytest
@@ -13,7 +13,7 @@ test:
 lint:
     uv run ruff check memes_api tests
 
-mypy:
+types:
     uv run pyright
     uv run mypy --strict memes_api tests
 
