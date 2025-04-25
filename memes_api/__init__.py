@@ -33,7 +33,11 @@ CSS_BASEDIR = Path(f"{os.path.dirname(__file__)}/css/").resolve().as_posix()
 IMAGES_BASEDIR = Path(f"{os.path.dirname(__file__)}/images/").resolve().as_posix()
 JS_BASEDIR = Path(f"{os.path.dirname(__file__)}/js/").resolve().as_posix()
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger(
+    __name__,
+)
+LOGGER.setLevel(logging.DEBUG)
+LOGGER.addHandler(logging.StreamHandler(sys.stderr))
 
 app = FastAPI()
 app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -188,6 +192,26 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]
 @app.get("/image_info/{filename}", response_model=None)
 async def get_image_info(filename: str) -> HTMLResponse:
     """gets the image info page"""
+
+    meme_config = meme_config_load()
+    session = get_aioboto3_session()
+
+    async with session.client("s3", endpoint_url=meme_config.endpoint_url) as s3_client:
+        try:
+            await s3_client.head_object(Bucket=meme_config.bucket, Key=filename)
+        except ClientError as error_message:
+            error_code = error_message.response.get("Error", {}).get("Code")
+            if error_code == "404":
+                status_code = 404
+                error_text = f"File not found '{filename}'"
+            else:
+                LOGGER.error(
+                    "error accessing /image_info/%s - %s", filename, error_message
+                )
+                status_code = 500
+                error_text = "Something in the backend broke!"
+            return HTMLResponse(error_text, status_code=status_code)
+
     jinja2_env = Environment(
         loader=PackageLoader(package_name="memes_api", package_path="./templates"),
         autoescape=select_autoescape(),

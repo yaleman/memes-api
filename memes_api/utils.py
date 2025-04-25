@@ -1,7 +1,6 @@
-""" utility functions """
+"""utility functions"""
 
 from json import dumps as json_dumps
-from functools import lru_cache
 from io import BytesIO
 import sys
 from typing import Any, Optional, TypedDict
@@ -22,7 +21,6 @@ class DefaultPageRenderContext(TypedDict):
     image_url: Optional[str]
 
 
-@lru_cache()
 def default_page_render_context() -> DefaultPageRenderContext:
     """returns a default context object for page rendering"""
     context: DefaultPageRenderContext = {
