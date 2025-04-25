@@ -10,11 +10,11 @@ services:
       retries: 5
     image: ghcr.io/yaleman/memes-api:latest
     command: ["memes-api", "--host", "0.0.0.0", "--port", "11707", "--proxy-headers"]
-    labels:
-      com.centurylinklabs.watchtower.enable: true
+    # labels:
+      # com.centurylinklabs.watchtower.enable: true
     ports:
-      - "127.0.0.1:11707:11707"
+      - "127.0.0.1:9000:11707"
     volumes:
-      - "${HOME}/.config/memes-api.json:/root/.config/memes-api.json"
+      - "${HOME}/.config/memes-api.json:/home/memes/.config/memes-api.json"
     # don't keep restarting it over and over
     restart: on-failure:5

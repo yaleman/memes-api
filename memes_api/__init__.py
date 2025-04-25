@@ -1,9 +1,10 @@
-""" Memes API """
+"""Memes API"""
 
 from hashlib import sha1
 
 from io import BytesIO
 import json
+import logging
 import os.path
 from pathlib import Path
 from typing import List, Union
@@ -31,6 +32,8 @@ from .utils import default_page_render_context, save_thumbnail
 CSS_BASEDIR = Path(f"{os.path.dirname(__file__)}/css/").resolve().as_posix()
 IMAGES_BASEDIR = Path(f"{os.path.dirname(__file__)}/images/").resolve().as_posix()
 JS_BASEDIR = Path(f"{os.path.dirname(__file__)}/js/").resolve().as_posix()
+
+LOGGER = logging.getLogger(__name__)
 
 app = FastAPI()
 app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -61,28 +64,34 @@ async def get_allimages() -> ImageList:
         region_name=meme_config.aws_region,
     )
 
-    if meme_config.endpoint_url is not None:
-        async with session.resource(
-            "s3", endpoint_url=meme_config.endpoint_url
-        ) as s3_resource:
-            bucket = await s3_resource.Bucket(meme_config.bucket)
-            return ImageList(
-                images=[
-                    image.key
-                    async for image in bucket.objects.iterator()
-                    if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX)
-                ]
-            )
-    else:
-        async with session.resource("s3") as s3_resource:
-            bucket = await s3_resource.Bucket(meme_config.bucket)
-            return ImageList(
-                images=[
-                    image.key
-                    async for image in bucket.objects.iterator()
-                    if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX)
-                ]
-            )
+    try:
+        if meme_config.endpoint_url is not None:
+            async with session.resource(
+                "s3", endpoint_url=meme_config.endpoint_url
+            ) as s3_resource:
+                bucket = await s3_resource.Bucket(meme_config.bucket)
+                return ImageList(
+                    images=[
+                        image.key
+                        async for image in bucket.objects.iterator()
+                        if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX)
+                    ]
+                )
+        else:
+            async with session.resource("s3") as s3_resource:
+                bucket = await s3_resource.Bucket(meme_config.bucket)
+                return ImageList(
+                    images=[
+                        image.key
+                        async for image in bucket.objects.iterator()
+                        if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX)
+                    ]
+                )
+    except ClientError as error:
+        if error.response.get("Error", {}).get("Code") == "NoSuchBucket":
+            return ImageList(images=[])
+        LOGGER.error("ClientError pulling images: %s", error)
+        return ImageList(images=[])
 
 
 def generate_thumbnail(content: bytes) -> ThumbnailData:
@@ -143,7 +152,7 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]
             else:
                 return HTMLResponse(status_code=404)
         except ClientError as error_message:
-            if error_message.response["Error"]["Code"] == "NoSuchKey":
+            if error_message.response.get("Error", {}).get("Code") == "NoSuchKey":
                 response_status = 404
                 error_text = f"File not found '{filename}'"
             else:
@@ -188,12 +197,12 @@ async def get_image_info(filename: str) -> HTMLResponse:
 
         context = default_page_render_context()
         context["image"] = filename
-        context[
-            "og_image"
-        ] = f"{context['baseurl']}/thumbnail/{filename.replace(' ', '%20')}"
-        context[
-            "image_url"
-        ] = f"{context['baseurl']}/image/{filename.replace(' ', '%20')}"
+        context["og_image"] = (
+            f"{context['baseurl']}/thumbnail/{filename.replace(' ', '%20')}"
+        )
+        context["image_url"] = (
+            f"{context['baseurl']}/image/{filename.replace(' ', '%20')}"
+        )
         context["page_title"] = f"Memes! - {filename}"
         new_filecontents = template.render(**context)
         return HTMLResponse(new_filecontents)
@@ -221,7 +230,7 @@ async def get_image(filename: str) -> Union[HTMLResponse, StreamingResponse]:
                 print("Couldn't find body!", file=sys.stderr)
                 return HTMLResponse(status_code=404)
         except ClientError as error_message:
-            if error_message.response["Error"]["Code"] == "NoSuchKey":
+            if error_message.response.get("Error", {}).get("Code") == "NoSuchKey":
                 response_status = 404
                 error_text = f"File not found '{filename}'"
             else:
