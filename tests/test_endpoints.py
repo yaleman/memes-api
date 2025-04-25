@@ -22,6 +22,11 @@ def test_get_allimages() -> None:
     assert response.status_code == 200
 
 
+def test_thumbnail() -> None:
+    response = client.get("/thumbnail/12345")
+    assert response.status_code == 404
+
+
 def test_openapi() -> None:
     openapi = app.openapi()
     for key, value in openapi.get("paths", {}).items():

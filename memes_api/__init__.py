@@ -33,11 +33,16 @@ CSS_BASEDIR = Path(f"{os.path.dirname(__file__)}/css/").resolve().as_posix()
 IMAGES_BASEDIR = Path(f"{os.path.dirname(__file__)}/images/").resolve().as_posix()
 JS_BASEDIR = Path(f"{os.path.dirname(__file__)}/js/").resolve().as_posix()
 
-LOGGER = logging.getLogger(
-    __name__,
-)
-LOGGER.setLevel(logging.DEBUG)
-LOGGER.addHandler(logging.StreamHandler(sys.stderr))
+
+def setup_logging(level: int = logging.DEBUG) -> None:
+    logging.basicConfig(
+        format="%(asctime)s %(levelname)s %(message)s",
+        level=level,
+        handlers=[
+            logging.StreamHandler(sys.stderr),
+        ],
+    )
+
 
 app = FastAPI()
 app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -94,7 +99,7 @@ async def get_allimages() -> ImageList:
     except ClientError as error:
         if error.response.get("Error", {}).get("Code") == "NoSuchBucket":
             return ImageList(images=[])
-        LOGGER.error("ClientError pulling images: %s", error)
+        logging.error("ClientError pulling images: %s", error)
         return ImageList(images=[])
 
 
@@ -156,11 +161,12 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]
             else:
                 return HTMLResponse(status_code=404)
         except ClientError as error_message:
-            if error_message.response.get("Error", {}).get("Code") == "NoSuchKey":
+            error_code = error_message.response.get("Error", {}).get("Code")
+            if error_code in ["404", "NoSuchKey"]:
                 response_status = 404
                 error_text = f"File not found '{filename}'"
             else:
-                error_text = f"ClientError pulling '{filename}': {error_message}"
+                error_text = f"ClientError pulling image for thumbnail '{filename}': {error_message}"
                 print(error_text, file=sys.stderr)
                 response_status = 500
                 if "ResponseMetadata" in error_message.response:
@@ -205,7 +211,7 @@ async def get_image_info(filename: str) -> HTMLResponse:
                 status_code = 404
                 error_text = f"File not found '{filename}'"
             else:
-                LOGGER.error(
+                logging.error(
                     "error accessing /image_info/%s - %s", filename, error_message
                 )
                 status_code = 500
@@ -279,7 +285,9 @@ async def get_js_by_filename(filename: str) -> Union[FileResponse, HTMLResponse]
     """return a js file"""
     filepath = Path(f"{os.path.dirname(__file__)}/js/{filename}").resolve()
     if not filepath.exists() or not filepath.is_file():
-        print(f"Can't find {filepath.as_posix()}")
+        logging.debug(
+            f"Can't find {filepath.as_posix()} in /static/js/{filename} request"
+        )
         return HTMLResponse(status_code=404)
 
     if JS_BASEDIR not in filepath.as_posix():
@@ -379,15 +387,23 @@ async def get_homepage() -> HTMLResponse:  # pylint: disable=invalid-name
 @click.option("--port", type=int, default=8000)
 @click.option("--proxy-headers", is_flag=True, help="Turn on proxy headers")
 @click.option("--reload", is_flag=True)
+@click.option("--debug", is_flag=True)
 def cli(
     host: str = "0.0.0.0",
     port: int = 8000,
     proxy_headers: bool = False,
     reload: bool = False,
+    debug: bool = False,
 ) -> None:
     """server"""
-    print(f"{proxy_headers=}", file=sys.stderr)
-    print(f"{reload=}", file=sys.stderr)
+    if debug:
+        setup_logging(logging.DEBUG)
+    else:
+        setup_logging(logging.INFO)
+
+    logging.debug(f"{proxy_headers=}")
+    logging.debug(f"{reload=}")
+    logging.debug(f"{debug=}")
     uvicorn_args = {
         "app": "memes_api:app",
         "reload": reload,
