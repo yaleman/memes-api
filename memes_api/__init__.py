@@ -75,7 +75,7 @@ class MemeCache:
     def get(self) -> Optional[ImageList]:
         if self.timestamp is None:
             return None
-        if self.timestamp + self.max_age < datetime.now():
+        if self.timestamp + self.max_age < datetime.now(UTC):
             self.cache = None
             self.timestamp = None
 
