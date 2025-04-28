@@ -1,5 +1,6 @@
 """Memes API"""
 
+from datetime import UTC, datetime, timedelta
 from hashlib import sha1
 
 from io import BytesIO
@@ -7,7 +8,7 @@ import json
 import logging
 import os.path
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 import sys
 
 import aioboto3  # type: ignore
@@ -63,9 +64,43 @@ class ThumbnailData(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
+class MemeCache:
+    """cache for the meme data"""
+
+    def __init__(self, max_age: timedelta) -> None:
+        self.max_age = max_age
+        self.cache: Optional[ImageList] = None
+        self.timestamp: Optional[datetime] = None
+
+    def get(self) -> Optional[ImageList]:
+        if self.timestamp is None:
+            return None
+        if self.timestamp + self.max_age < datetime.now():
+            self.cache = None
+            self.timestamp = None
+
+        return self.cache
+
+    def clear(self) -> None:
+        """clear the cache"""
+        self.cache = None
+        self.timestamp = None
+
+    def set(self, value: ImageList) -> None:
+        self.cache = value
+        self.timestamp = datetime.now(UTC)
+
+
+meme_cache = MemeCache(max_age=timedelta(minutes=15))
+
+
 @app.get("/allimages")
 async def get_allimages() -> ImageList:
     """returns all the images"""
+    cached_response = meme_cache.get()
+    if cached_response is not None:
+        return cached_response
+
     meme_config = meme_config_load()
     session = aioboto3.Session(
         aws_access_key_id=meme_config.aws_access_key_id,
@@ -73,13 +108,15 @@ async def get_allimages() -> ImageList:
         region_name=meme_config.aws_region,
     )
 
+    res = None
+
     try:
         if meme_config.endpoint_url is not None:
             async with session.resource(
                 "s3", endpoint_url=meme_config.endpoint_url
             ) as s3_resource:
                 bucket = await s3_resource.Bucket(meme_config.bucket)
-                return ImageList(
+                res = ImageList(
                     images=[
                         image.key
                         async for image in bucket.objects.iterator()
@@ -89,7 +126,7 @@ async def get_allimages() -> ImageList:
         else:
             async with session.resource("s3") as s3_resource:
                 bucket = await s3_resource.Bucket(meme_config.bucket)
-                return ImageList(
+                res = ImageList(
                     images=[
                         image.key
                         async for image in bucket.objects.iterator()
@@ -101,6 +138,8 @@ async def get_allimages() -> ImageList:
             return ImageList(images=[])
         logging.error("ClientError pulling images: %s", error)
         return ImageList(images=[])
+    meme_cache.set(res)
+    return res
 
 
 def generate_thumbnail(content: bytes) -> ThumbnailData:
