@@ -251,7 +251,11 @@ async def get_image_info(filename: str) -> HTMLResponse:
                 error_text = f"File not found '{filename}'"
             else:
                 logging.error(
-                    "error accessing /image_info/%s - %s", filename, error_message
+                    "error accessing bucket=%s key=%s url=/image_info/%s - %s",
+                    meme_config.bucket,
+                    filename,
+                    filename,
+                    error_message,
                 )
                 status_code = 500
                 error_text = "Something in the backend broke!"
