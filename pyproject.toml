@@ -15,7 +15,7 @@ dependencies = [
     "Pillow>=11.2.1",
     "pydantic>=2.11.3",
     "types-Pillow>=10.2.0",
-    "uvicorn==0.34.3",
+    "uvicorn==0.35.0",
 ]
 
 [project.scripts]
