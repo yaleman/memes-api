@@ -5,7 +5,7 @@ WORKDIR /code
 COPY ./uv.lock /code/uv.lock
 COPY ./pyproject.toml /code/pyproject.toml
 
-RUN python -m pip install --upgrade pip uv
+RUN python -m pip install --upgrade uv
 COPY ./memes_api/ /code/memes_api/
 RUN python -m pip install /code/
 
