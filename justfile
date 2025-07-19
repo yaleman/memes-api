@@ -1,6 +1,6 @@
-default: checks
+default: check
 
-checks: lint types test
+check: lint types test
 
 coverage:
     uv run coverage run -m pytest
