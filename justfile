@@ -1,6 +1,6 @@
-default: checks
+default: check
 
-checks: lint types test
+check: lint types test
 
 coverage:
     uv run coverage run -m pytest
@@ -14,8 +14,8 @@ lint:
     uv run ruff check memes_api tests
 
 types:
-    uv run pyright
     uv run mypy --strict memes_api tests
+    uv run ty check
 
 docker_build:
     docker buildx build \

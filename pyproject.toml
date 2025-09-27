@@ -3,7 +3,7 @@
 name = "memes-api"
 description = "A memes API"
 license = { text = "MPL 2.0" }
-version = "0.0.4"
+version = "0.0.5"
 authors = [{ name = "James Hogkinson", email = "james@terminaloutcomes.com" }]
 requires-python = "<4.0,>=3.13"
 dependencies = [
@@ -41,6 +41,7 @@ dev = [
     "pyright>=1.1.400",
     "pytest>=8.3.5",
     "ruff>=0.11.7",
+    "ty>=0.0.1a15",
     "types-pillow>=10.2.0.20240822",
 ]
 
