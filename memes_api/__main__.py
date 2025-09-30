@@ -1,6 +1,6 @@
-""" CLI interface / main interface to memes-api """
+"""CLI interface / main interface to memes-api"""
 
-from . import cli
+from memes_api import cli
 
 if __name__ == "__main__":
     cli()

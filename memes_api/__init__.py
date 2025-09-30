@@ -36,6 +36,7 @@ JS_BASEDIR = Path(f"{os.path.dirname(__file__)}/js/").resolve().as_posix()
 
 
 def setup_logging(level: int = logging.DEBUG) -> None:
+    """sets up logging."""
     logging.basicConfig(
         format="%(asctime)s %(levelname)s %(message)s",
         level=level,
@@ -73,6 +74,7 @@ class MemeCache:
         self.timestamp: Optional[datetime] = None
 
     def get(self) -> Optional[ImageList]:
+        """get the cache, or None if it's stale or not set"""
         if self.timestamp is None:
             return None
         if self.timestamp + self.max_age < datetime.now(UTC):
@@ -87,6 +89,7 @@ class MemeCache:
         self.timestamp = None
 
     def set(self, value: ImageList) -> None:
+        """set the cache"""
         self.cache = value
         self.timestamp = datetime.now(UTC)
 
@@ -243,19 +246,20 @@ async def get_image_info(filename: str) -> HTMLResponse:
 
     async with session.client("s3", endpoint_url=meme_config.endpoint_url) as s3_client:
         try:
-            await s3_client.head_object(Bucket=meme_config.bucket, Key=filename)
+            await s3_client.get_object(Bucket=meme_config.bucket, Key=filename)
         except ClientError as error_message:
             error_code = error_message.response.get("Error", {}).get("Code")
-            if error_code == "404":
+            if error_code in ("404", "NoSuchKey"):
                 status_code = 404
                 error_text = f"File not found '{filename}'"
             else:
                 logging.error(
-                    "error accessing bucket=%s key=%s url=/image_info/%s - %s",
+                    "error accessing bucket=%s key=%s url=/image_info/%s - %s %s",
                     meme_config.bucket,
                     filename,
                     filename,
                     error_message,
+                    error_message.response,
                 )
                 status_code = 500
                 error_text = "Something in the backend broke!"
@@ -329,7 +333,7 @@ async def get_js_by_filename(filename: str) -> Union[FileResponse, HTMLResponse]
     filepath = Path(f"{os.path.dirname(__file__)}/js/{filename}").resolve()
     if not filepath.exists() or not filepath.is_file():
         logging.debug(
-            f"Can't find {filepath.as_posix()} in /static/js/{filename} request"
+            "Can't find %s in /static/js/%s request", filepath.as_posix(), filename
         )
         return HTMLResponse(status_code=404)
 
@@ -444,9 +448,9 @@ def cli(
     else:
         setup_logging(logging.INFO)
 
-    logging.debug(f"{proxy_headers=}")
-    logging.debug(f"{reload=}")
-    logging.debug(f"{debug=}")
+    logging.debug("proxy_headers=%s", proxy_headers)
+    logging.debug("reload=%s", reload)
+    logging.debug("debug=%s", debug)
     uvicorn_args = {
         "app": "memes_api:app",
         "reload": reload,

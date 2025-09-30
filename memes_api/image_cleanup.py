@@ -1,4 +1,5 @@
-""" cleans up filenames to remove spaces because s3 is sassy """
+"""cleans up filenames to remove spaces because s3 is sassy"""
+
 import asyncio
 import sys
 from typing import List
@@ -51,7 +52,7 @@ async def rename_image(
 
     async with session.client("s3", endpoint_url=meme_config.endpoint_url) as s3_object:
         try:
-            result = await s3_object.head_object(
+            result = await s3_object.get_object(
                 Key=target_name,
                 Bucket=meme_config.bucket,
             )
