@@ -6,12 +6,12 @@ services:
     healthcheck:
       test: ["CMD", "memes-healthcheck", "http://127.0.0.1:9000/up"]
       interval: 60s
-      timeout: 1s
+      timeout: 3s
       retries: 5
     image: ghcr.io/yaleman/memes-api:latest
     command: ["memes-api", "--host", "0.0.0.0", "--port", "9000", "--proxy-headers"]
     # labels:
-      # com.centurylinklabs.watchtower.enable: true
+    # com.centurylinklabs.watchtower.enable: true
     ports:
       - "127.0.0.1:9000:9000"
     volumes:
