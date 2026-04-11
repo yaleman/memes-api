@@ -1,10 +1,10 @@
-
 [project]
 name = "memes-api"
 description = "A memes API"
-license = { text = "MPL 2.0" }
 version = "0.0.5"
-authors = [{ name = "James Hogkinson", email = "james@terminaloutcomes.com" }]
+authors = [
+    { name = "James Hogkinson", email = "james@terminaloutcomes.com" },
+]
 requires-python = "<4.0,>=3.13"
 dependencies = [
     "aioboto3>=14.1.0",
@@ -17,6 +17,10 @@ dependencies = [
     "types-Pillow>=10.2.0",
     "uvicorn==0.44.0",
 ]
+readme = "README.md"
+
+[project.license]
+text = "MPL 2.0"
 
 [project.scripts]
 memes-api = "memes_api.__main__:cli"
@@ -25,10 +29,16 @@ memes-healthcheck = "memes_api.healthcheck:cli"
 [tool.mypy]
 plugins = "pydantic.mypy"
 
-[build-system]
-requires = ["pdm-backend"]
-build-backend = "pdm.backend"
+[tool.coverage.run]
+omit = [
+    "tests/*",
+]
 
+[build-system]
+requires = [
+    "pdm-backend",
+]
+build-backend = "pdm.backend"
 
 [dependency-groups]
 dev = [
@@ -44,7 +54,3 @@ dev = [
     "ty>=0.0.1a15",
     "types-pillow>=10.2.0.20240822",
 ]
-
-
-[tool.coverage.run]
-omit = ["tests/*"]
