@@ -17,10 +17,27 @@ class MemeConfig(BaseModel):
     baseurl: str
     endpoint_url: Optional[str]
 
+    def load_from_file(self, filepath: Path) -> None:
+        """load from a file"""
+        newvals = MemeConfig.model_validate_json(filepath.read_text(encoding="utf-8"))
+        for field in MemeConfig.model_fields:
+            setattr(self, field, getattr(newvals, field))
+
+    @classmethod
+    def default(cls) -> "MemeConfig":
+        """Load config from the default locations"""
+        for testpath in CONFIG_FILES:
+            filepath = Path(testpath).expanduser().resolve()
+            if filepath.exists():
+                return MemeConfig.model_validate_json(
+                    filepath.read_text(encoding="utf-8")
+                )
+        raise FileNotFoundError(f"Couldn't find config at {CONFIG_FILES}")
+
 
 CONFIG_FILES = [
-    "~/.config/memes-api.json",
     "memes-api.json",
+    "~/.config/memes-api.json",
     "/etc/memes-api.json",
 ]
 
@@ -31,8 +48,8 @@ def meme_config_load(
 ) -> MemeConfig:
     """Config loader, returns a pydantic object, will try the following in order, returning the result of parsing the first one found.
 
-    - `~/.config/memes-api.json`
     - `memes-api.json`
+    - `~/.config/memes-api.json`
     - `/etc/memes-api.json`
     """
 

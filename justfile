@@ -1,4 +1,8 @@
-default: check
+default: list
+
+[private]
+list:
+    just --list
 
 check: lint types test
 

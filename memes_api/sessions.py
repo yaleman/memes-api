@@ -1,13 +1,13 @@
-""" session things """
+"""session things"""
 
+import logging
 import aioboto3  # type: ignore
+from .config import MemeConfig
 
-from .config import meme_config_load
 
-
-def get_aioboto3_session() -> aioboto3.Session:
+def get_aioboto3_session(meme_config: MemeConfig) -> aioboto3.Session:
     """gets a session"""
-    meme_config = meme_config_load()
+    logging.debug("Getting aioboto3 session meme_config=%s", meme_config)
     return aioboto3.Session(
         aws_access_key_id=meme_config.aws_access_key_id,
         aws_secret_access_key=meme_config.aws_secret_access_key,

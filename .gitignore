@@ -12,3 +12,4 @@ build
 data/*
 .envrc
 .coverage
+memes-api.json*

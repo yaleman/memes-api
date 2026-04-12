@@ -16,5 +16,5 @@ services:
       - "127.0.0.1:9000:9000"
     volumes:
       - "${HOME}/.config/memes-api.json:/home/memes/.config/memes-api.json"
-    # don't keep restarting it over and over
-    restart: on-failure:5
+    # start automatically on daemon/host restart unless explicitly stopped
+    restart: unless-stopped
