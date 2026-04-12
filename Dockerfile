@@ -7,7 +7,7 @@ COPY ./pyproject.toml /code/pyproject.toml
 
 RUN python -m pip install --upgrade uv
 COPY ./memes_api/ /code/memes_api/
-ADD READEME.md /code/README.md
+ADD README.md /code/README.md
 RUN python -m pip install /code/
 
 RUN rm -rf /code
