@@ -18,7 +18,6 @@ lint:
     uv run ruff check memes_api tests
 
 types:
-    uv run mypy --strict memes_api tests
     uv run ty check
 
 docker_build:

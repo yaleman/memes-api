@@ -10,6 +10,8 @@ const app = Vue.createApp({
     data: function(){
         return {
         images : [],
+        loaded: false,
+        error: false,
         search: '',
         currentPage: 1, // default to the first page
         button_md: false,
@@ -70,10 +72,15 @@ const app = Vue.createApp({
             this.updateUrl();
         },
         getImages: function() {
+            this.error = false;
             axios.get(
                 "/allimages",
             ).then(res => {
                 this.images = res.data.images;
+                this.loaded = true;
+            }).catch(() => {
+                this.loaded = true;
+                this.error = true;
             });
         },
         updateUrl() {

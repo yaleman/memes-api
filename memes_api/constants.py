@@ -1,4 +1,14 @@
-""" constant values """
+"""constant values"""
+
+from enum import IntEnum
 
 THUMBNAIL_BUCKET_PREFIX = "thumbs/"
-THUMBNAIL_DIMENSIONS = (200, 200)
+
+
+class ThumbnailDimensions(IntEnum):
+    X = 200
+    Y = 200
+
+    @classmethod
+    def size(cls) -> tuple[int, int]:
+        return (cls.X, cls.Y)

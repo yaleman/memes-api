@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import List, Optional, Union
 import sys
 
-import aioboto3  # type: ignore
+import aioboto3
 from botocore.exceptions import ClientError
 import click
 from fastapi import FastAPI
@@ -26,7 +26,7 @@ import uvicorn
 
 from .sessions import get_aioboto3_session
 from .config import MemeConfig
-from .constants import THUMBNAIL_BUCKET_PREFIX, THUMBNAIL_DIMENSIONS
+from .constants import THUMBNAIL_BUCKET_PREFIX, ThumbnailDimensions
 from .utils import default_page_render_context, save_thumbnail
 
 
@@ -46,7 +46,7 @@ def setup_logging(level: int = logging.DEBUG) -> None:
     )
 
 
-meme_config = MemeConfig.default()
+MEME_CONFIG = MemeConfig.default()
 
 app = FastAPI()
 app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -107,19 +107,19 @@ async def get_allimages() -> ImageList:
         return cached_response
 
     session = aioboto3.Session(
-        aws_access_key_id=meme_config.aws_access_key_id,
-        aws_secret_access_key=meme_config.aws_secret_access_key,
-        region_name=meme_config.aws_region,
+        aws_access_key_id=MEME_CONFIG.aws_access_key_id,
+        aws_secret_access_key=MEME_CONFIG.aws_secret_access_key,
+        region_name=MEME_CONFIG.aws_region,
     )
 
     res = None
 
     try:
-        if meme_config.endpoint_url is not None:
+        if MEME_CONFIG.endpoint_url is not None:
             async with session.resource(
-                "s3", endpoint_url=meme_config.endpoint_url
+                "s3", endpoint_url=MEME_CONFIG.endpoint_url
             ) as s3_resource:
-                bucket = await s3_resource.Bucket(meme_config.bucket)
+                bucket = await s3_resource.Bucket(MEME_CONFIG.bucket)
                 res = ImageList(
                     images=[
                         image.key
@@ -129,7 +129,7 @@ async def get_allimages() -> ImageList:
                 )
         else:
             async with session.resource("s3") as s3_resource:
-                bucket = await s3_resource.Bucket(meme_config.bucket)
+                bucket = await s3_resource.Bucket(MEME_CONFIG.bucket)
                 res = ImageList(
                     images=[
                         image.key
@@ -150,20 +150,21 @@ def generate_thumbnail(content: bytes) -> ThumbnailData:
     """generate a thumbnail and return a BytesIO object to read it back"""
     tmpstorage = BytesIO()
     with Image.open(BytesIO(content)) as tempimage:
-        tempimage.thumbnail(THUMBNAIL_DIMENSIONS)
-        tempimage = tempimage.convert("RGB")
-        expanded = Image.new("RGB", THUMBNAIL_DIMENSIONS, (255, 255, 255))
+        tempdata = Image.frombytes(tempimage.mode, tempimage.size, tempimage.tobytes())
+    tempdata.thumbnail(ThumbnailDimensions.size(), Image.Resampling.LANCZOS)
+    tempdata = tempdata.convert("RGB")
+    expanded = Image.new("RGB", ThumbnailDimensions.size(), (255, 255, 255))
 
-        paste_x = 0
-        paste_y = 0
-        # work out if we need to move it within the thumbnail block
-        if tempimage.height != THUMBNAIL_DIMENSIONS[0]:
-            paste_y = int((THUMBNAIL_DIMENSIONS[0] - tempimage.height) / 2)
-        if tempimage.width != THUMBNAIL_DIMENSIONS[0]:
-            paste_x = int((THUMBNAIL_DIMENSIONS[0] - tempimage.width) / 2)
+    paste_x = 0
+    paste_y = 0
+    # work out if we need to move it within the thumbnail block
+    if tempdata.height != ThumbnailDimensions.Y:
+        paste_y = int((ThumbnailDimensions.Y - tempdata.height) / 2)
+    if tempdata.width != ThumbnailDimensions.X:
+        paste_x = int((ThumbnailDimensions.X - tempdata.width) / 2)
 
-        expanded.paste(tempimage, (paste_x, paste_y))
-        expanded.save(tmpstorage, "JPEG")
+    expanded.paste(tempdata, (paste_x, paste_y))
+    expanded.save(tmpstorage, "JPEG")
     tmpstorage.seek(0)
     imghash = sha1(tmpstorage.read()).hexdigest()
     tmpstorage.seek(0)
@@ -178,14 +179,14 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]
 
     if not, it'll pull the original image and make a thumb from that
     """
-    async with get_aioboto3_session(meme_config).client(
+    async with get_aioboto3_session(MEME_CONFIG).client(
         "s3",
-        endpoint_url=meme_config.endpoint_url,
+        endpoint_url=MEME_CONFIG.endpoint_url,
     ) as s3_client:
         # try and get the pre-cached thumbnail
         try:
             image_object = await s3_client.get_object(
-                Bucket=meme_config.bucket,
+                Bucket=MEME_CONFIG.bucket,
                 Key=f"{THUMBNAIL_BUCKET_PREFIX}{filename}",
             )
             if "Body" in image_object:
@@ -197,7 +198,7 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]
 
         try:
             image_object = await s3_client.get_object(
-                Bucket=meme_config.bucket, Key=filename
+                Bucket=MEME_CONFIG.bucket, Key=filename
             )
             if "Body" in image_object:
                 content = await image_object["Body"].read()
@@ -221,9 +222,9 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]
     thumbnail_data = generate_thumbnail(content)
 
     # save the thunbnail to s3
-    async with get_aioboto3_session(meme_config).client(
+    async with get_aioboto3_session(MEME_CONFIG).client(
         "s3",
-        endpoint_url=meme_config.endpoint_url,
+        endpoint_url=MEME_CONFIG.endpoint_url,
     ) as s3_client:
         await save_thumbnail(s3_client, filename, thumbnail_data.reader)
     thumbnail_data.reader.seek(0)
@@ -242,11 +243,11 @@ async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]
 async def get_image_info(filename: str) -> HTMLResponse:
     """gets the image info page"""
 
-    session = get_aioboto3_session(meme_config)
+    session = get_aioboto3_session(MEME_CONFIG)
 
-    async with session.client("s3", endpoint_url=meme_config.endpoint_url) as s3_client:
+    async with session.client("s3", endpoint_url=MEME_CONFIG.endpoint_url) as s3_client:
         try:
-            await s3_client.get_object(Bucket=meme_config.bucket, Key=filename)
+            await s3_client.get_object(Bucket=MEME_CONFIG.bucket, Key=filename)
         except ClientError as error_message:
             error_code = error_message.response.get("Error", {}).get("Code")
             if error_code in ("404", "NoSuchKey"):
@@ -255,7 +256,7 @@ async def get_image_info(filename: str) -> HTMLResponse:
             else:
                 logging.error(
                     "error accessing bucket=%s key=%s url=/image_info/%s - %s %s",
-                    meme_config.bucket,
+                    MEME_CONFIG.bucket,
                     filename,
                     filename,
                     error_message,
@@ -292,12 +293,12 @@ async def get_image_info(filename: str) -> HTMLResponse:
 @app.get("/image/{filename}", response_model=None)
 async def get_image(filename: str) -> Union[HTMLResponse, StreamingResponse]:
     """returns an image"""
-    session = get_aioboto3_session(meme_config)
+    session = get_aioboto3_session(MEME_CONFIG)
 
-    async with session.client("s3", endpoint_url=meme_config.endpoint_url) as s3_client:
+    async with session.client("s3", endpoint_url=MEME_CONFIG.endpoint_url) as s3_client:
         try:
             image_object = await s3_client.get_object(
-                Bucket=meme_config.bucket, Key=filename
+                Bucket=MEME_CONFIG.bucket, Key=filename
             )
             ob_info = image_object["ResponseMetadata"]["HTTPHeaders"]
             if "Body" in image_object:
@@ -431,7 +432,6 @@ async def get_homepage() -> HTMLResponse:  # pylint: disable=invalid-name
 @click.command()
 @click.option("--host", type=str, default="0.0.0.0")
 @click.option("--port", type=int, default=8000)
-@click.option("--config", help="Config path")
 @click.option("--proxy-headers", is_flag=True, help="Turn on proxy headers")
 @click.option("--reload", is_flag=True)
 @click.option("--debug", is_flag=True)
@@ -452,8 +452,6 @@ def cli(
     logging.debug("proxy_headers=%s", proxy_headers)
     logging.debug("reload=%s", reload)
     logging.debug("debug=%s", debug)
-    if config is not None:
-        meme_config.load_from_file(Path(config))
     uvicorn_args = {
         "app": "memes_api:app",
         "reload": reload,

@@ -1,10 +1,9 @@
 """cleans up filenames to remove spaces because s3 is sassy"""
 
 import asyncio
-import sys
 from typing import List
 
-import aioboto3  # type: ignore
+import aioboto3
 from botocore.exceptions import ClientError
 import click
 
@@ -57,7 +56,7 @@ async def rename_image(
                 Bucket=meme_config.bucket,
             )
             print(f"Target file {target_name} exists")
-            sys.exit(1)
+            return False
         except ClientError as failed:
             if hasattr(failed, "response"):
                 response = getattr(failed, "response")
@@ -76,13 +75,13 @@ async def rename_image(
             print(f"copy_object {result=}")
         except ClientError as client_error:
             print(f"failed to copy {image_name} to {target_name}:\n{client_error}")
-            sys.exit(1)
+            return False
         try:
             result = await s3_object.delete_object(**copy_source)
             print(f"delete_object {result=}")
         except ClientError as client_error:
             print(f"failed to delete {image_name}:\n{client_error}")
-            sys.exit(1)
+            return False
     return True
 
 

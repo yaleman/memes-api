@@ -17,12 +17,6 @@ class MemeConfig(BaseModel):
     baseurl: str
     endpoint_url: Optional[str]
 
-    def load_from_file(self, filepath: Path) -> None:
-        """load from a file"""
-        newvals = MemeConfig.model_validate_json(filepath.read_text(encoding="utf-8"))
-        for field in MemeConfig.model_fields:
-            setattr(self, field, getattr(newvals, field))
-
     @classmethod
     def default(cls) -> "MemeConfig":
         """Load config from the default locations"""

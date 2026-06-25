@@ -18,3 +18,8 @@ div.imagebox{
 [v-cloak] {
   display: none;
 }
+
+img.image-loading {
+  background: #f0f0f0 url("/static/images/thumbnail_background.svg") center/30% no-repeat;
+  min-height: 200px;
+}

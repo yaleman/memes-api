@@ -3,7 +3,7 @@
 {% block content %}
     <div class="row">
         <div class="col">
-        <img alt="{{image}}" title="{{image}}" src="/image/{{image|replace(" ","%20")}}" class="mx-auto"/>
+        <img alt="{{image}}" title="{{image}}" src="/image/{{image|replace(" ","%20")}}" class="mx-auto image-loading" loading="lazy"/>
         </div>
     </div>
     <div class="row">
@@ -19,7 +19,7 @@
             id="direct_link"
             ref="direct_link"
             value="{{image_url}}"
-            disabled="true"
+            readonly
             v-on:focus="$event.target.select()"
             />
         </div>

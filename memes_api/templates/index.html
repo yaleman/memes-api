@@ -6,15 +6,23 @@
     <a :href="'/image_info/'+image">
         <div class="imagebox">
             <img :src="'/thumbnail/'+image" :title=image :alt=image
-                class="imagebox" />
+                class="imagebox" loading="lazy" width="200" height="200" />
         </div>
     </a>
 </template>
 
-<div v-if="!images">
-    Waiting for the API response...
+<div v-if="!loaded">
+    <div class="spinner-border text-secondary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
 </div>
-<div id="app" v-if="images">
+<div v-if="loaded && error">
+    Failed to load images. <button class="btn btn-sm btn-outline-danger" @click="getImages">Retry</button>
+</div>
+<div v-if="loaded && !error && images.length === 0">
+    No images found.
+</div>
+<div id="app" v-if="loaded && images.length > 0">
     <paginate
         v-model="currentPage"
         :page-count="pageCount"

@@ -1,7 +1,7 @@
 """session things"""
 
 import logging
-import aioboto3  # type: ignore
+import aioboto3
 from .config import MemeConfig
 
 
