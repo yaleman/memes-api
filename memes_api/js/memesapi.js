@@ -58,6 +58,9 @@ const app = Vue.createApp({
         totalImages() {
             return this.images.length;
         },
+        imageCountMessage() {
+            return `Displaying ${this.count_filteredImages} / ${this.totalImages} images.`;
+        },
         pageCount() {
             let addpage = 0;
             if (this.filteredImages.length % imagesPerPage != 0) {
