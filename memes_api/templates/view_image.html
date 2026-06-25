@@ -41,7 +41,7 @@
                 type="text"
                 id="markdown_big"
                 ref="md_link"
-                class="form-control" value="![]({{image_url}})" disabled="true"/>
+                 class="form-control" value="![]({{image_url}})" readonly v-on:focus="$event.target.select()"/>
         </div>
         <div class="col-auto form-group">
             <button type="button"
