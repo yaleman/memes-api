@@ -1,8 +1,8 @@
 """utility functions"""
 
 from json import dumps as json_dumps
+import logging
 from io import BytesIO
-import sys
 from typing import Any, Optional, TypedDict
 
 from .config import meme_config_load
@@ -19,6 +19,9 @@ class DefaultPageRenderContext(TypedDict):
     og_image: Optional[str]
     image: Optional[str]
     image_url: Optional[str]
+    heading: Optional[str]
+    message: Optional[str]
+    twitter_handle: Optional[str]
 
 
 def default_page_render_context() -> DefaultPageRenderContext:
@@ -31,6 +34,9 @@ def default_page_render_context() -> DefaultPageRenderContext:
         "og_image": None,
         "image": None,
         "image_url": None,
+        "heading": None,
+        "message": None,
+        "twitter_handle": meme_config_load().twitter_handle,
     }
     return context
 
@@ -48,20 +54,16 @@ async def save_thumbnail(
             meme_config.bucket,
             f"{THUMBNAIL_BUCKET_PREFIX}{filename}",
         )
-        print(
-            json_dumps(
+        logging.info(json_dumps(
                 {
                     "action": "s3 upload",
                     "filename": filename,
                     "result": "success",
                 },
                 default=str,
-            ),
-            file=sys.stderr,
-        )
+            ))
     except Exception as upload_error:  # pylint: disable=broad-except
-        print(
-            json_dumps(
+        logging.error(json_dumps(
                 {
                     "action": "s3 upload",
                     "filename": filename,
@@ -69,8 +71,6 @@ async def save_thumbnail(
                     "error": upload_error,
                 },
                 default=str,
-            ),
-            file=sys.stderr,
-        )
+            ))
         return False
     return True

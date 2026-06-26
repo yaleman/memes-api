@@ -1,6 +1,7 @@
 """config things"""
 
 from functools import lru_cache
+
 from typing import Optional
 from pathlib import Path
 
@@ -16,6 +17,7 @@ class MemeConfig(BaseModel):
     bucket: str
     baseurl: str
     endpoint_url: Optional[str]
+    twitter_handle: Optional[str] = None
 
     @classmethod
     def default(cls) -> "MemeConfig":
@@ -36,7 +38,7 @@ CONFIG_FILES = [
 ]
 
 
-@lru_cache()
+@lru_cache(maxsize=1, typed=True)
 def meme_config_load(
     filepath: Optional[Path] = None,
 ) -> MemeConfig:
@@ -46,15 +48,18 @@ def meme_config_load(
     - `~/.config/memes-api.json`
     - `/etc/memes-api.json`
     """
-
     if filepath is not None:
-        if not isinstance(filepath, Path):
-            filepath = Path(filepath)
         if filepath.exists():
-            return MemeConfig.model_validate_json(filepath.read_text(encoding="utf-8"))
+            result = MemeConfig.model_validate_json(
+                filepath.read_text(encoding="utf-8")
+            )
+            return result
         raise FileNotFoundError(f"Couldn't find config at {filepath}")
     for testpath in CONFIG_FILES:
         filepath = Path(testpath).expanduser().resolve()
         if filepath.exists():
-            return MemeConfig.model_validate_json(filepath.read_text(encoding="utf-8"))
+            result = MemeConfig.model_validate_json(
+                filepath.read_text(encoding="utf-8")
+            )
+            return result
     raise FileNotFoundError(f"Couldn't find config at {CONFIG_FILES}")

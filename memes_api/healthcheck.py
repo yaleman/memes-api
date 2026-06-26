@@ -1,7 +1,5 @@
 """ does the healthcheck, doesn't need curl """
 
-import sys
-
 import urllib.request
 import urllib.error
 
@@ -19,13 +17,13 @@ def cli(url: str = DEFAULT_URL) -> None:
             result = response.read().decode("utf-8")
             if result == "OK":
                 print("OK")
-                sys.exit(0)
+                return
             else:
                 print(f"Failed to get 'OK' response: {result}")
-                sys.exit(1)
+                return
     except urllib.error.URLError as error_message:
-        print(f"Error: {error_message}", file=sys.stderr)
-        sys.exit(1)
+        print(f"Error: {error_message}")
+        return
 
 
 if __name__ == "__main__":

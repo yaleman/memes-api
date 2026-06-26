@@ -1,6 +1,7 @@
 """cleans up filenames to remove spaces because s3 is sassy"""
 
 import asyncio
+import logging
 from typing import List
 
 import aioboto3
@@ -8,7 +9,9 @@ from botocore.exceptions import ClientError
 import click
 
 from .config import meme_config_load, MemeConfig
-from .constants import THUMBNAIL_BUCKET_PREFIX
+from .s3_utils import list_images
+
+logger = logging.getLogger(__name__)
 
 
 async def get_image_list(
@@ -16,25 +19,7 @@ async def get_image_list(
     session: aioboto3.Session,
 ) -> List[str]:
     """pulls the list of images"""
-    if meme_config.endpoint_url is not None:
-        async with session.resource(
-            "s3", endpoint_url=meme_config.endpoint_url
-        ) as s3_resource:
-            bucket = await s3_resource.Bucket(meme_config.bucket)
-            results = [
-                image.key
-                async for image in bucket.objects.iterator()
-                if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX)
-            ]
-    else:
-        async with session.resource("s3") as s3_resource:
-            bucket = await s3_resource.Bucket(meme_config.bucket)
-            results = [
-                image.key
-                async for image in bucket.objects.iterator()
-                if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX)
-            ]
-    return results
+    return await list_images(session, meme_config)
 
 
 async def rename_image(
@@ -47,24 +32,17 @@ async def rename_image(
     while "--" in target_name:
         target_name = target_name.replace("--", "-")
 
-    print(f"Renaming {image_name} to {target_name}")
+    logging.info("Renaming %s to %s", image_name, target_name)
 
     async with session.client("s3", endpoint_url=meme_config.endpoint_url) as s3_object:
         try:
-            result = await s3_object.get_object(
-                Key=target_name,
-                Bucket=meme_config.bucket,
-            )
-            print(f"Target file {target_name} exists")
+            await s3_object.head_object(Key=target_name, Bucket=meme_config.bucket)
+            logging.info("Target file %s exists, skipping", target_name)
             return False
         except ClientError as failed:
-            if hasattr(failed, "response"):
-                response = getattr(failed, "response")
-                if "Error" in response:
-                    error = response["Error"]
-                    if error["Code"] != "404":
-                        print(f"head_object error: {failed}")
-                        return False
+            if failed.response.get("Error", {}).get("Code") not in ("404", "NoSuchKey"):
+                logging.error("head_object error: %s", failed)
+                return False
         try:
             copy_source = {"Bucket": meme_config.bucket, "Key": image_name}
             result = await s3_object.copy_object(
@@ -72,15 +50,15 @@ async def rename_image(
                 Bucket=meme_config.bucket,
                 Key=target_name,
             )
-            print(f"copy_object {result=}")
+            logging.info("copy_object result: %s", result)
         except ClientError as client_error:
-            print(f"failed to copy {image_name} to {target_name}:\n{client_error}")
+            logging.error("failed to copy %s to %s: %s", image_name, target_name, client_error)
             return False
         try:
             result = await s3_object.delete_object(**copy_source)
-            print(f"delete_object {result=}")
+            logging.info("delete_object result: %s", result)
         except ClientError as client_error:
-            print(f"failed to delete {image_name}:\n{client_error}")
+            logging.error("failed to delete %s: %s", image_name, client_error)
             return False
     return True
 

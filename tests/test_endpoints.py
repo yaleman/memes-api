@@ -1,14 +1,27 @@
 """tests the basics of the home page"""
 
+import pytest
+
 import random
+from pathlib import Path
 from fastapi.testclient import TestClient
 
-from memes_api import app
+from memes_api import create_app
+from memes_api.config import MemeConfig
 
-client = TestClient(app)
+
+test_config = MemeConfig.model_validate_json(
+    Path("tests/test_config.json").read_text(encoding="utf-8")
+)
+app = create_app(config=test_config)
 
 
-def test_homepage() -> None:
+@pytest.fixture(scope="module")
+def client():
+    return TestClient(app)
+
+
+def test_homepage(client: TestClient) -> None:
     """grabs the homepage"""
     for _ in range(100):
         response = client.get("/")
@@ -16,18 +29,18 @@ def test_homepage() -> None:
         assert "Memes!" in response.content.decode("utf-8")
 
 
-def test_get_allimages() -> None:
+def test_get_allimages(client: TestClient) -> None:
     """grabs all images"""
     response = client.get("/allimages")
     assert response.status_code == 200
 
 
-def test_thumbnail() -> None:
+def test_thumbnail(client: TestClient) -> None:
     response = client.get("/thumbnail/12345")
     assert response.status_code == 404
 
 
-def test_openapi() -> None:
+def test_openapi(client: TestClient) -> None:
     openapi = app.openapi()
     for key, value in openapi.get("paths", {}).items():
         # print(f"{key}: {value}")

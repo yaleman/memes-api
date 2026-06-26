@@ -13,3 +13,4 @@ data/*
 .envrc
 .coverage
 memes-api.json*
+node_modules/

@@ -80,6 +80,7 @@ const app = Vue.createApp({
                 "/allimages",
             ).then(res => {
                 this.images = res.data.images;
+                this.error = res.data.error ? true : false;
                 this.loaded = true;
             }).catch(() => {
                 this.loaded = true;

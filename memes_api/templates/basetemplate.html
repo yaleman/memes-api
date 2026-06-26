@@ -21,7 +21,7 @@
     {% endif %}
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@yaleman43381258">
+    {% if twitter_handle %}<meta name="twitter:site" content="@{{twitter_handle}}">{% endif %}
 
     <meta name="apple-mobile-web-app-title" content="Memes!" />
     <meta name="theme-color" content="white" />

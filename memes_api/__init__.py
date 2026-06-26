@@ -1,22 +1,26 @@
 """Memes API"""
 
+import asyncio
 from datetime import UTC, datetime, timedelta
-from hashlib import sha1
+from hashlib import sha256
 
 from io import BytesIO
-import json
 import logging
 import os.path
 from pathlib import Path
 from typing import List, Optional, Union
 import sys
 
-import aioboto3
 from botocore.exceptions import ClientError
 import click
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    StreamingResponse,
+    PlainTextResponse,
+)
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 import jinja2.exceptions
@@ -27,6 +31,7 @@ import uvicorn
 from .sessions import get_aioboto3_session
 from .config import MemeConfig
 from .constants import THUMBNAIL_BUCKET_PREFIX, ThumbnailDimensions
+from .s3_utils import list_images
 from .utils import default_page_render_context, save_thumbnail
 
 
@@ -46,16 +51,27 @@ def setup_logging(level: int = logging.DEBUG) -> None:
     )
 
 
-MEME_CONFIG = MemeConfig.default()
+JINJA2_ENV = Environment(
+    loader=PackageLoader(package_name="memes_api", package_path="./templates"),
+    autoescape=select_autoescape(),
+)
 
-app = FastAPI()
-app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+def _error_response(status_code: int, heading: str, message: str) -> HTMLResponse:
+    """render a simple error page"""
+    template = JINJA2_ENV.get_template("error.html")
+    context = default_page_render_context()
+    context["page_title"] = f"Error {status_code}"
+    context["heading"] = heading
+    context["message"] = message
+    return HTMLResponse(template.render(**context), status_code=status_code)
 
 
 class ImageList(BaseModel):
-    """list of images from the filesystem"""
+    """list of images from the filesystem, with optional error return"""
 
     images: List[str]
+    error: Optional[str] = None
 
 
 class ThumbnailData(BaseModel):
@@ -99,65 +115,17 @@ class MemeCache:
 meme_cache = MemeCache(max_age=timedelta(minutes=15))
 
 
-@app.get("/allimages")
-async def get_allimages() -> ImageList:
-    """returns all the images"""
-    cached_response = meme_cache.get()
-    if cached_response is not None:
-        return cached_response
-
-    session = aioboto3.Session(
-        aws_access_key_id=MEME_CONFIG.aws_access_key_id,
-        aws_secret_access_key=MEME_CONFIG.aws_secret_access_key,
-        region_name=MEME_CONFIG.aws_region,
-    )
-
-    res = None
-
-    try:
-        if MEME_CONFIG.endpoint_url is not None:
-            async with session.resource(
-                "s3", endpoint_url=MEME_CONFIG.endpoint_url
-            ) as s3_resource:
-                bucket = await s3_resource.Bucket(MEME_CONFIG.bucket)
-                res = ImageList(
-                    images=[
-                        image.key
-                        async for image in bucket.objects.iterator()
-                        if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX)
-                    ]
-                )
-        else:
-            async with session.resource("s3") as s3_resource:
-                bucket = await s3_resource.Bucket(MEME_CONFIG.bucket)
-                res = ImageList(
-                    images=[
-                        image.key
-                        async for image in bucket.objects.iterator()
-                        if not image.key.startswith(THUMBNAIL_BUCKET_PREFIX)
-                    ]
-                )
-    except ClientError as error:
-        if error.response.get("Error", {}).get("Code") == "NoSuchBucket":
-            return ImageList(images=[])
-        logging.error("ClientError pulling images: %s", error)
-        return ImageList(images=[])
-    meme_cache.set(res)
-    return res
-
-
 def generate_thumbnail(content: bytes) -> ThumbnailData:
     """generate a thumbnail and return a BytesIO object to read it back"""
     tmpstorage = BytesIO()
     with Image.open(BytesIO(content)) as tempimage:
-        tempdata = Image.frombytes(tempimage.mode, tempimage.size, tempimage.tobytes())
+        tempdata = tempimage.copy()
     tempdata.thumbnail(ThumbnailDimensions.size(), Image.Resampling.LANCZOS)
     tempdata = tempdata.convert("RGB")
     expanded = Image.new("RGB", ThumbnailDimensions.size(), (255, 255, 255))
 
     paste_x = 0
     paste_y = 0
-    # work out if we need to move it within the thumbnail block
     if tempdata.height != ThumbnailDimensions.Y:
         paste_y = int((ThumbnailDimensions.Y - tempdata.height) / 2)
     if tempdata.width != ThumbnailDimensions.X:
@@ -166,267 +134,307 @@ def generate_thumbnail(content: bytes) -> ThumbnailData:
     expanded.paste(tempdata, (paste_x, paste_y))
     expanded.save(tmpstorage, "JPEG")
     tmpstorage.seek(0)
-    imghash = sha1(tmpstorage.read()).hexdigest()
+    imghash = sha256(tmpstorage.read()).hexdigest()
     tmpstorage.seek(0)
     return ThumbnailData(hash=imghash, reader=tmpstorage)
 
 
-@app.get("/thumbnail/{filename}", response_model=None)
-async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]:
-    """returns an image thumbnailed
+def create_app(config: Optional[MemeConfig] = None) -> FastAPI:
+    """Create a FastAPI application with the given configuration.
 
-    first it tries to pull a pre-cached thumbnail and just returns that
-
-    if not, it'll pull the original image and make a thumb from that
+    If no config is provided, loads from default locations.
     """
-    async with get_aioboto3_session(MEME_CONFIG).client(
-        "s3",
-        endpoint_url=MEME_CONFIG.endpoint_url,
-    ) as s3_client:
-        # try and get the pre-cached thumbnail
-        try:
-            image_object = await s3_client.get_object(
-                Bucket=MEME_CONFIG.bucket,
-                Key=f"{THUMBNAIL_BUCKET_PREFIX}{filename}",
-            )
-            if "Body" in image_object:
-                content = await image_object["Body"].read()
-                return StreamingResponse(BytesIO(content))
-        except ClientError:
-            # thumbnail wasn't found, or wasn't loadable
-            pass
+    app_config = config if config is not None else MemeConfig.default()
+
+    new_app = FastAPI()
+    new_app.add_middleware(GZipMiddleware, minimum_size=1000)
+    new_app.state.config = app_config
+
+    _register_routes(new_app)
+
+    return new_app
+
+
+def _register_routes(app: FastAPI) -> None:
+    """Register all route handlers on the given app instance."""
+
+    @app.get("/allimages")
+    async def get_allimages() -> ImageList:
+        """returns all the images"""
+        cached_response = meme_cache.get()
+        if cached_response is not None:
+            return cached_response
+
+        session = get_aioboto3_session(app.state.config)
+
+        res: ImageList
 
         try:
-            image_object = await s3_client.get_object(
-                Bucket=MEME_CONFIG.bucket, Key=filename
-            )
-            if "Body" in image_object:
-                content = await image_object["Body"].read()
-            else:
-                return HTMLResponse(status_code=404)
-        except ClientError as error_message:
-            error_code = error_message.response.get("Error", {}).get("Code")
-            if error_code in ["404", "NoSuchKey"]:
-                response_status = 404
-                error_text = f"File not found '{filename}'"
-            else:
-                error_text = f"ClientError pulling image for thumbnail '{filename}': {error_message}"
-                print(error_text, file=sys.stderr)
+            images = await list_images(session, app.state.config)
+            res = ImageList(images=images)
+        except ClientError as error:
+            if error.response.get("Error", {}).get("Code") == "NoSuchBucket":
+                return ImageList(images=[], error="Bucket not found")
+            logging.error("ClientError pulling images: %s", error)
+            return ImageList(images=[], error="Error pulling images")
+        meme_cache.set(res)
+        return res
+
+    @app.get("/thumbnail/{filename}", response_model=None)
+    async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]:
+        """returns an image thumbnailed
+
+        first it tries to pull a pre-cached thumbnail and just returns that
+
+        if not, it'll pull the original image and make a thumb from that
+        """
+        session = get_aioboto3_session(app.state.config)
+        async with session.client(
+            "s3",
+            endpoint_url=app.state.config.endpoint_url,
+        ) as s3_client:
+            try:
+                image_object = await s3_client.get_object(
+                    Bucket=app.state.config.bucket,
+                    Key=f"{THUMBNAIL_BUCKET_PREFIX}{filename}",
+                )
+                if "Body" in image_object:
+                    content = await image_object["Body"].read()
+                    return StreamingResponse(BytesIO(content))
+            except ClientError as e:
+                if e.response.get("Error", {}).get("Code") not in ("404", "NoSuchKey"):
+                    logging.error(
+                        "Error checking cached thumbnail '%s': %s", filename, e
+                    )
+                    raise
+
+            try:
+                image_object = await s3_client.get_object(
+                    Bucket=app.state.config.bucket, Key=filename
+                )
+                if "Body" not in image_object:
+                    logging.error("No body in response for '%s'", filename)
+                    return _error_response(
+                        502, "Image unavailable", "The image could not be retrieved."
+                    )
+                content = await image_object["Body"].read()  # type: ignore[possibly-undefined]
+            except ClientError as error_message:
+                error_code = error_message.response.get("Error", {}).get("Code")
+                if error_code in ["404", "NoSuchKey"]:
+                    return _error_response(
+                        404, "File not found", f"The image '{filename}' doesn't exist."
+                    )
+                logging.error(
+                    "ClientError pulling image for thumbnail '%s': %s",
+                    filename,
+                    error_message,
+                )
                 response_status = 500
                 if "ResponseMetadata" in error_message.response:
                     if "HTTPStatusCode" in error_message.response["ResponseMetadata"]:
                         response_status = error_message.response["ResponseMetadata"][
                             "HTTPStatusCode"
                         ]
-            return HTMLResponse(error_text, status_code=response_status)
-    thumbnail_data = generate_thumbnail(content)
+                return _error_response(
+                    response_status,
+                    "Server error",
+                    "Something went wrong retrieving the image.",
+                )
 
-    # save the thunbnail to s3
-    async with get_aioboto3_session(MEME_CONFIG).client(
-        "s3",
-        endpoint_url=MEME_CONFIG.endpoint_url,
-    ) as s3_client:
-        await save_thumbnail(s3_client, filename, thumbnail_data.reader)
-    thumbnail_data.reader.seek(0)
+            thumbnail_data = await asyncio.to_thread(generate_thumbnail, content)
 
-    imghash = thumbnail_data.hash
-    headers = {
-        "ETag": f'W/"{imghash}"',
-        "Cache-Control": "max-age=86400",
-    }
-    return StreamingResponse(
-        content=thumbnail_data.reader, media_type="image/jpeg", headers=headers
-    )
+            await save_thumbnail(s3_client, filename, thumbnail_data.reader)
+        thumbnail_data.reader.seek(0)
 
+        imghash = thumbnail_data.hash
+        headers = {
+            "ETag": f'W/"{imghash}"',
+            "Cache-Control": "max-age=86400",
+        }
+        return StreamingResponse(
+            content=thumbnail_data.reader, media_type="image/jpeg", headers=headers
+        )
 
-@app.get("/image_info/{filename}", response_model=None)
-async def get_image_info(filename: str) -> HTMLResponse:
-    """gets the image info page"""
+    @app.get("/image_info/{filename}", response_model=None)
+    async def get_image_info(filename: str) -> HTMLResponse:
+        """gets the image info page"""
+        session = get_aioboto3_session(app.state.config)
 
-    session = get_aioboto3_session(MEME_CONFIG)
-
-    async with session.client("s3", endpoint_url=MEME_CONFIG.endpoint_url) as s3_client:
-        try:
-            await s3_client.get_object(Bucket=MEME_CONFIG.bucket, Key=filename)
-        except ClientError as error_message:
-            error_code = error_message.response.get("Error", {}).get("Code")
-            if error_code in ("404", "NoSuchKey"):
-                status_code = 404
-                error_text = f"File not found '{filename}'"
-            else:
+        async with session.client(
+            "s3", endpoint_url=app.state.config.endpoint_url
+        ) as s3_client:
+            try:
+                await s3_client.get_object(Bucket=app.state.config.bucket, Key=filename)
+            except ClientError as error_message:
+                error_code = error_message.response.get("Error", {}).get("Code")
+                if error_code in ("404", "NoSuchKey"):
+                    return _error_response(
+                        404, "File not found", f"The image '{filename}' doesn't exist."
+                    )
                 logging.error(
                     "error accessing bucket=%s key=%s url=/image_info/%s - %s %s",
-                    MEME_CONFIG.bucket,
+                    app.state.config.bucket,
                     filename,
                     filename,
                     error_message,
                     error_message.response,
                 )
-                status_code = 500
-                error_text = "Something in the backend broke!"
-            return HTMLResponse(error_text, status_code=status_code)
+                return _error_response(
+                    500, "Server error", "Something went wrong retrieving the image."
+                )
 
-    jinja2_env = Environment(
-        loader=PackageLoader(package_name="memes_api", package_path="./templates"),
-        autoescape=select_autoescape(),
-    )
-    try:
-        template = jinja2_env.get_template("view_image.html")
-
-        context = default_page_render_context()
-        context["image"] = filename
-        context["og_image"] = (
-            f"{context['baseurl']}/thumbnail/{filename.replace(' ', '%20')}"
-        )
-        context["image_url"] = (
-            f"{context['baseurl']}/image/{filename.replace(' ', '%20')}"
-        )
-        context["page_title"] = f"Memes! - {filename}"
-        new_filecontents = template.render(**context)
-        return HTMLResponse(new_filecontents)
-
-    except jinja2.exceptions.TemplateNotFound as template_error:
-        print(f"Failed to load template: {template_error}", file=sys.stderr)
-    return HTMLResponse("Failed to render page, sorry!", status_code=500)
-
-
-@app.get("/image/{filename}", response_model=None)
-async def get_image(filename: str) -> Union[HTMLResponse, StreamingResponse]:
-    """returns an image"""
-    session = get_aioboto3_session(MEME_CONFIG)
-
-    async with session.client("s3", endpoint_url=MEME_CONFIG.endpoint_url) as s3_client:
         try:
-            image_object = await s3_client.get_object(
-                Bucket=MEME_CONFIG.bucket, Key=filename
+            template = JINJA2_ENV.get_template("view_image.html")
+
+            context = default_page_render_context()
+            context["image"] = filename
+            context["og_image"] = (
+                f"{context['baseurl']}/thumbnail/{filename.replace(' ', '%20')}"
             )
-            ob_info = image_object["ResponseMetadata"]["HTTPHeaders"]
-            if "Body" in image_object:
+            context["image_url"] = (
+                f"{context['baseurl']}/image/{filename.replace(' ', '%20')}"
+            )
+            context["page_title"] = f"Memes! - {filename}"
+            new_filecontents = template.render(**context)
+            return HTMLResponse(new_filecontents)
+
+        except jinja2.exceptions.TemplateNotFound as template_error:
+            logging.error(f"Failed to load template: {template_error}")
+        return HTMLResponse("Failed to render page, sorry!", status_code=500)
+
+    @app.get("/image/{filename}", response_model=None)
+    async def get_image(filename: str) -> Union[HTMLResponse, StreamingResponse]:
+        """returns an image"""
+        session = get_aioboto3_session(app.state.config)
+
+        async with session.client(
+            "s3", endpoint_url=app.state.config.endpoint_url
+        ) as s3_client:
+            try:
+                image_object = await s3_client.get_object(
+                    Bucket=app.state.config.bucket, Key=filename
+                )
+                try:
+                    ob_info = image_object["ResponseMetadata"]["HTTPHeaders"]
+                except (KeyError, TypeError):
+                    logging.error(
+                        "Unexpected S3 response structure for '%s': %s",
+                        filename,
+                        image_object,
+                    )
+                    return _error_response(
+                        502, "Server error", "Unexpected storage response."
+                    )
+                if "Body" not in image_object:
+                    logging.warning("Couldn't find body for '%s'", filename)
+                    return _error_response(
+                        502, "Server error", "The image could not be retrieved."
+                    )
                 content = await image_object["Body"].read()
-            else:
-                print("Couldn't find body!", file=sys.stderr)
-                return HTMLResponse(status_code=404)
-        except ClientError as error_message:
-            if error_message.response.get("Error", {}).get("Code") == "NoSuchKey":
-                response_status = 404
-                error_text = f"File not found '{filename}'"
-            else:
+            except ClientError as error_message:
+                if error_message.response.get("Error", {}).get("Code") == "NoSuchKey":
+                    return _error_response(
+                        404, "File not found", f"The image '{filename}' doesn't exist."
+                    )
+                logging.error("ClientError pulling '%s': %s", filename, error_message)
                 response_status = 500
-                error_text = f"ClientError pulling '{filename}': {error_message}"
-                print(error_text, file=sys.stderr)
                 if "ResponseMetadata" in error_message.response:
                     if "HTTPStatusCode" in error_message.response["ResponseMetadata"]:
                         response_status = error_message.response["ResponseMetadata"][
                             "HTTPStatusCode"
                         ]
-            return HTMLResponse(error_text, status_code=response_status)
-    headers = {
-        "content_type": ob_info["content-type"],
-        "content_length": ob_info["content-length"],
-    }
-    return StreamingResponse(BytesIO(content), headers=headers)
+                return _error_response(
+                    response_status,
+                    "Server error",
+                    "Something went wrong retrieving the image.",
+                )
+        headers = {
+            "content-type": str(
+                ob_info.get("content-type", "application/octet-stream")
+            ),
+            "content-length": str(ob_info.get("content-length", len(content))),
+        }
+        return StreamingResponse(BytesIO(content), headers=headers)
 
-
-@app.get("/static/js/{filename}", response_model=None)
-async def get_js_by_filename(filename: str) -> Union[FileResponse, HTMLResponse]:
-    """return a js file"""
-    filepath = Path(f"{os.path.dirname(__file__)}/js/{filename}").resolve()
-    if not filepath.exists() or not filepath.is_file():
-        logging.debug(
-            "Can't find %s in /static/js/%s request", filepath.as_posix(), filename
-        )
-        return HTMLResponse(status_code=404)
-
-    if JS_BASEDIR not in filepath.as_posix():
-        print(
-            json.dumps(
-                {
-                    "action": "attempt_outside_images_dir",
-                    "original_path": filename,
-                    "resolved_path": filepath.as_posix(),
-                }
+    @app.get("/static/js/{filename}", response_model=None)
+    async def get_js_by_filename(filename: str) -> Union[FileResponse, HTMLResponse]:
+        """return a js file"""
+        filepath = Path(f"{os.path.dirname(__file__)}/js/{filename}").resolve()
+        base_dir = Path(JS_BASEDIR).resolve()
+        if not filepath.is_relative_to(base_dir):
+            logging.warning(
+                "attempt_outside_js_dir original_path=%s resolved_path=%s",
+                filename,
+                filepath.as_posix(),
             )
-        )
-        return HTMLResponse(status_code=403)
-    return FileResponse(filepath.as_posix())
-
-
-@app.get("/static/css/{filename}", response_model=None)
-async def get_css_by_filename(filename: str) -> Union[FileResponse, HTMLResponse]:
-    """return the css file"""
-    filepath = Path(f"{os.path.dirname(__file__)}/css/{filename}").resolve()
-    if not filepath.resolve().is_file() or not filepath.exists():
-        return HTMLResponse(status_code=404)
-    if CSS_BASEDIR not in filepath.resolve().as_posix():
-        print(
-            json.dumps(
-                {
-                    "action": "attempt_outside_css_dir",
-                    "original_path": filename,
-                    "resolved_path": filepath.resolve(),
-                },
-                default=str,
+            return HTMLResponse(status_code=403)
+        if not filepath.is_file():
+            logging.debug(
+                "Can't find %s in /static/js/%s request", filepath.as_posix(), filename
             )
-        )
-        return HTMLResponse(status_code=403)
-    return FileResponse(filepath.as_posix())
+            return HTMLResponse(status_code=404)
+        return FileResponse(filepath.as_posix())
 
-
-@app.get("/static/images/{filename}", response_model=None)
-async def get_static_image_by_filename(
-    filename: str,
-) -> Union[FileResponse, HTMLResponse]:
-    """return the filename file"""
-    filepath = Path(f"{os.path.dirname(__file__)}/images/{filename}").resolve()
-    if not filepath.resolve().is_file() or not filepath.exists():
-        return HTMLResponse(status_code=404)
-    if IMAGES_BASEDIR not in filepath.resolve().as_posix():
-        print(
-            json.dumps(
-                {
-                    "action": "attempt_outside_images_dir",
-                    "original_path": filename,
-                    "resolved_path": filepath.resolve(),
-                },
-                default=str,
+    @app.get("/static/css/{filename}", response_model=None)
+    async def get_css_by_filename(filename: str) -> Union[FileResponse, HTMLResponse]:
+        """return the css file"""
+        filepath = Path(f"{os.path.dirname(__file__)}/css/{filename}").resolve()
+        base_dir = Path(CSS_BASEDIR).resolve()
+        if not filepath.is_relative_to(base_dir):
+            logging.warning(
+                "attempt_outside_css_dir original_path=%s resolved_path=%s",
+                filename,
+                filepath.as_posix(),
             )
-        )
-        return HTMLResponse(status_code=403)
-    return FileResponse(filepath.as_posix())
+            return HTMLResponse(status_code=403)
+        if not filepath.is_file():
+            return HTMLResponse(status_code=404)
+        return FileResponse(filepath.as_posix())
 
+    @app.get("/static/images/{filename}", response_model=None)
+    async def get_static_image_by_filename(
+        filename: str,
+    ) -> Union[FileResponse, HTMLResponse]:
+        """return the filename file"""
+        filepath = Path(f"{os.path.dirname(__file__)}/images/{filename}").resolve()
+        base_dir = Path(IMAGES_BASEDIR).resolve()
+        if not filepath.is_relative_to(base_dir):
+            logging.warning(
+                "attempt_outside_images_dir original_path=%s resolved_path=%s",
+                filename,
+                filepath.as_posix(),
+            )
+            return HTMLResponse(status_code=403)
+        if not filepath.is_file():
+            return HTMLResponse(status_code=404)
+        return FileResponse(filepath.as_posix())
 
-@app.get("/robots.txt", response_model=None)
-async def get_robotstxt() -> HTMLResponse:
-    """robots.txt file"""
-    return HTMLResponse(
-        """User-agent: *
+    @app.get("/robots.txt", response_model=None)
+    async def get_robotstxt() -> HTMLResponse:
+        """robots.txt file"""
+        return HTMLResponse(
+            """User-agent: *
 """
-    )
+        )
 
+    @app.get("/up", response_model=None)
+    async def get_healthcheck() -> PlainTextResponse:
+        """healthcheck endpoint"""
+        return PlainTextResponse("OK")
 
-@app.get("/up", response_model=None)
-async def get_healthcheck() -> HTMLResponse:
-    """healthcheck endpoint"""
-    return HTMLResponse("OK")
+    @app.get("/", response_model=None)
+    async def get_homepage() -> HTMLResponse:
+        """homepage"""
+        try:
+            template = JINJA2_ENV.get_template("index.html")
+            context = default_page_render_context()
+            context["enable_search"] = True
+            new_filecontents = template.render(**context)
+            return HTMLResponse(new_filecontents)
 
-
-@app.get("/", response_model=None)
-async def get_homepage() -> HTMLResponse:  # pylint: disable=invalid-name
-    """homepage"""
-    jinja2_env = Environment(
-        loader=PackageLoader(package_name="memes_api", package_path="./templates"),
-        autoescape=select_autoescape(),
-    )
-    try:
-        template = jinja2_env.get_template("index.html")
-        context = default_page_render_context()
-        context["enable_search"] = True
-        new_filecontents = template.render(**context)
-        return HTMLResponse(new_filecontents)
-
-    except jinja2.exceptions.TemplateNotFound as template_error:
-        print(f"Failed to load template: {template_error}", file=sys.stderr)
-    return HTMLResponse("Something went wrong, sorry.", status_code=500)
+        except jinja2.exceptions.TemplateNotFound as template_error:
+            logging.error(f"Failed to load template: {template_error}")
+        return HTMLResponse("Something went wrong, sorry.", status_code=500)
 
 
 @click.command()
@@ -441,7 +449,6 @@ def cli(
     proxy_headers: bool = False,
     reload: bool = False,
     debug: bool = False,
-    config: Optional[str] = None,
 ) -> None:
     """server"""
     if debug:
@@ -452,8 +459,8 @@ def cli(
     logging.debug("proxy_headers=%s", proxy_headers)
     logging.debug("reload=%s", reload)
     logging.debug("debug=%s", debug)
+
     uvicorn_args = {
-        "app": "memes_api:app",
         "reload": reload,
         "host": host,
         "port": port,
@@ -461,4 +468,4 @@ def cli(
     }
     if proxy_headers:
         uvicorn_args["forwarded_allow_ips"] = "*"
-    uvicorn.run(**uvicorn_args)  # type: ignore
+    uvicorn.run(app="memes_api:create_app", factory=True, **uvicorn_args)  # ty: ignore[invalid-argument-type]
