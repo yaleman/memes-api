@@ -2,8 +2,8 @@
   "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
   "files": {
     "includes": [
-      "github_linter/**/*.js",
-      "github_linter/**/*.css",
+      "memes_api/js/**/*.js",
+      "memes_api/css/**/*.css",
       "!!.venv/",
       "!!**/pico.min.css"
     ]

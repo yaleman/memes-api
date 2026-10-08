@@ -285,3 +285,32 @@ def test_non_file_cache_entry_falls_back(storage: Any) -> None:
         await cache.close()
 
     asyncio.run(scenario())
+
+
+def test_oversized_source_does_not_abort_prewarm(
+    storage: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from io import BytesIO
+
+    from PIL import Image
+
+    image = BytesIO()
+    Image.new("RGB", (10, 10)).save(image, "JPEG")
+    storage.put_object(
+        Bucket=memes_api.meme_config.bucket, Key="oversized.jpg", Body=image.getvalue()
+    )
+    filenames = [f"robot-{index}.jpg" for index in range(8)]
+    for filename in filenames:
+        seed(storage, filename, thumbnail=True)
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 1)
+
+    async def scenario() -> None:
+        cache = ThumbnailCache(memes_api.meme_config)
+        await cache.prewarm(["oversized.jpg", *filenames])
+        assert all(cache.lookup(name).kind is CacheKind.FRESH for name in filenames)
+        assert await cache.get("oversized.jpg") == ThumbnailFailure(
+            FailureKind.INVALID_IMAGE
+        )
+        await cache.close()
+
+    asyncio.run(scenario())

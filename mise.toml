@@ -26,11 +26,7 @@ run = "biome check --verbose"
 run = "docker build -t 'ghcr.io/yaleman/memes-api:latest' ."
 
 [tasks.docker_run]
-depends = ["docker_build"]
-run = """docker run --rm -it \
-        -p 8000:8000 \
-        --env-file .envrc" \
-        'ghcr.io/yaleman/memes-api:latest'"""
+run = "docker compose up --build"
 
 [tasks.check]
 depends = ["ruff", "ty", "pytest", "biome"]

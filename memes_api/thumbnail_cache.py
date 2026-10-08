@@ -14,7 +14,7 @@ from typing import Any
 
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi.responses import FileResponse, Response
-from PIL import UnidentifiedImageError
+from PIL import Image, UnidentifiedImageError
 
 from .config import MemeConfig
 from .constants import THUMBNAIL_BUCKET_PREFIX
@@ -202,7 +202,12 @@ class ThumbnailCache:
                     original = await body.read()
                 try:
                     content = await asyncio.to_thread(generate_thumbnail, original)
-                except (UnidentifiedImageError, OSError, ValueError):
+                except (
+                    Image.DecompressionBombError,
+                    UnidentifiedImageError,
+                    OSError,
+                    ValueError,
+                ):
                     LOGGER.exception("Cannot decode thumbnail source")
                     return ThumbnailFailure(FailureKind.INVALID_IMAGE)
                 self.start(self._upload(filename, content))
