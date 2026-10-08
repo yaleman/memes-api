@@ -3,7 +3,7 @@ name: mypy
 "on":
   push:
     branches:
-      - main  # Set a branch to deploy
+      - main # Set a branch to deploy
   pull_request:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -13,14 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.13'
-      - name: Running mypy
-        run: |
-          python --version
-          python -m pip install --quiet --no-cache-dir --upgrade uv
-          uv run mypy --strict memes_api tests
+      - uses: jdx/mise-action@v5.1.1
+      - name: Running type checking
+        run: mise run ty

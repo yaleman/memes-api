@@ -2,9 +2,7 @@
 name = "memes-api"
 description = "A memes API"
 version = "0.0.5"
-authors = [
-    { name = "James Hogkinson", email = "james@terminaloutcomes.com" },
-]
+authors = [{ name = "James Hogkinson", email = "james@terminaloutcomes.com" }]
 requires-python = "<4.0,>=3.13"
 dependencies = [
     "aioboto3>=15.1.0",
@@ -30,27 +28,21 @@ memes-healthcheck = "memes_api.healthcheck:cli"
 plugins = "pydantic.mypy"
 
 [tool.coverage.run]
-omit = [
-    "tests/*",
-]
+omit = ["tests/*"]
 
 [build-system]
-requires = [
-    "pdm-backend",
-]
+requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
 [dependency-groups]
 dev = [
     "boto3-stubs>=1.37.36",
-    "coverage>=7.8.0",
+    "coverage>=7.16.2",
     "coveralls>=4.0.1",
-    "httpx>=0.28.1",
-    "mypy>=1.15.0",
-    "pylint-pydantic>=0.3.5",
-    "pyright>=1.1.400",
-    "pytest>=8.3.5",
-    "ruff>=0.11.7",
-    "ty>=0.0.1a15",
+    "httpx2>=2.13.1",
+    "pytest>=9.1.1",
+    "ruff>=0.16.10",
+    "testcontainers[localstack]>=4.15.0",
+    "ty>=0.0.85",
     "types-pillow>=10.2.0.20240822",
 ]

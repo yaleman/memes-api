@@ -1,10 +1,11 @@
-""" tests that the healthcheck works """
+"""tests that the healthcheck works"""
 
 from fastapi.testclient import TestClient
 
 from memes_api import app
 
 client = TestClient(app)
+
 
 def test_healthcheck() -> None:
     """tests the healthcheck works"""

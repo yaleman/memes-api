@@ -1,38 +1,35 @@
 """Memes API"""
 
-from datetime import UTC, datetime, timedelta
-from hashlib import sha1
-
-from io import BytesIO
 import json
 import logging
 import os.path
-from pathlib import Path
-from typing import List, Optional, Union
 import sys
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
-import aioboto3  # type: ignore
-from botocore.exceptions import ClientError
+import aioboto3
 import click
+import jinja2.exceptions
+import uvicorn
+from botocore.exceptions import ClientError
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
-
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from jinja2 import Environment, PackageLoader, select_autoescape
-import jinja2.exceptions
-from PIL import Image
-from pydantic import BaseModel, ConfigDict
-import uvicorn
+from pydantic import BaseModel
 
-from .sessions import get_aioboto3_session
 from .config import MemeConfig
-from .constants import THUMBNAIL_BUCKET_PREFIX, THUMBNAIL_DIMENSIONS
-from .utils import default_page_render_context, save_thumbnail
-
+from .constants import THUMBNAIL_BUCKET_PREFIX
+from .sessions import get_aioboto3_session
+from .thumbnail_cache import FailureKind, ThumbnailCache, ThumbnailFailure
+from .utils import default_page_render_context
 
 CSS_BASEDIR = Path(f"{os.path.dirname(__file__)}/css/").resolve().as_posix()
 IMAGES_BASEDIR = Path(f"{os.path.dirname(__file__)}/images/").resolve().as_posix()
 JS_BASEDIR = Path(f"{os.path.dirname(__file__)}/js/").resolve().as_posix()
+LOGGER = logging.getLogger(__name__)
 
 
 def setup_logging(level: int = logging.DEBUG) -> None:
@@ -48,23 +45,31 @@ def setup_logging(level: int = logging.DEBUG) -> None:
 
 meme_config = MemeConfig.default()
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
+    cache = ThumbnailCache(meme_config)
+    application.state.thumbnail_cache = cache
+
+    async def warm() -> None:
+        images = await get_allimages()
+        await cache.prewarm(images.images)
+
+    cache.start(warm())
+    try:
+        yield
+    finally:
+        await cache.close()
+
+
+app = FastAPI(lifespan=lifespan)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
 class ImageList(BaseModel):
     """list of images from the filesystem"""
 
-    images: List[str]
-
-
-class ThumbnailData(BaseModel):
-    """data returned from generate_thumbnail"""
-
-    hash: str
-    reader: BytesIO
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    images: list[str]
 
 
 class MemeCache:
@@ -72,10 +77,10 @@ class MemeCache:
 
     def __init__(self, max_age: timedelta) -> None:
         self.max_age = max_age
-        self.cache: Optional[ImageList] = None
-        self.timestamp: Optional[datetime] = None
+        self.cache: ImageList | None = None
+        self.timestamp: datetime | None = None
 
-    def get(self) -> Optional[ImageList]:
+    def get(self) -> ImageList | None:
         """get the cache, or None if it's stale or not set"""
         if self.timestamp is None:
             return None
@@ -140,102 +145,24 @@ async def get_allimages() -> ImageList:
     except ClientError as error:
         if error.response.get("Error", {}).get("Code") == "NoSuchBucket":
             return ImageList(images=[])
-        logging.error("ClientError pulling images: %s", error)
+        LOGGER.error("ClientError pulling images: %s", error)
         return ImageList(images=[])
     meme_cache.set(res)
     return res
 
 
-def generate_thumbnail(content: bytes) -> ThumbnailData:
-    """generate a thumbnail and return a BytesIO object to read it back"""
-    tmpstorage = BytesIO()
-    with Image.open(BytesIO(content)) as tempimage:
-        tempimage.thumbnail(THUMBNAIL_DIMENSIONS)
-        tempimage = tempimage.convert("RGB")
-        expanded = Image.new("RGB", THUMBNAIL_DIMENSIONS, (255, 255, 255))
-
-        paste_x = 0
-        paste_y = 0
-        # work out if we need to move it within the thumbnail block
-        if tempimage.height != THUMBNAIL_DIMENSIONS[0]:
-            paste_y = int((THUMBNAIL_DIMENSIONS[0] - tempimage.height) / 2)
-        if tempimage.width != THUMBNAIL_DIMENSIONS[0]:
-            paste_x = int((THUMBNAIL_DIMENSIONS[0] - tempimage.width) / 2)
-
-        expanded.paste(tempimage, (paste_x, paste_y))
-        expanded.save(tmpstorage, "JPEG")
-    tmpstorage.seek(0)
-    imghash = sha1(tmpstorage.read()).hexdigest()
-    tmpstorage.seek(0)
-    return ThumbnailData(hash=imghash, reader=tmpstorage)
-
-
 @app.get("/thumbnail/{filename}", response_model=None)
-async def get_thumbnail(filename: str) -> Union[HTMLResponse, StreamingResponse]:
-    """returns an image thumbnailed
-
-    first it tries to pull a pre-cached thumbnail and just returns that
-
-    if not, it'll pull the original image and make a thumb from that
-    """
-    async with get_aioboto3_session(meme_config).client(
-        "s3",
-        endpoint_url=meme_config.endpoint_url,
-    ) as s3_client:
-        # try and get the pre-cached thumbnail
-        try:
-            image_object = await s3_client.get_object(
-                Bucket=meme_config.bucket,
-                Key=f"{THUMBNAIL_BUCKET_PREFIX}{filename}",
-            )
-            if "Body" in image_object:
-                content = await image_object["Body"].read()
-                return StreamingResponse(BytesIO(content))
-        except ClientError:
-            # thumbnail wasn't found, or wasn't loadable
-            pass
-
-        try:
-            image_object = await s3_client.get_object(
-                Bucket=meme_config.bucket, Key=filename
-            )
-            if "Body" in image_object:
-                content = await image_object["Body"].read()
-            else:
-                return HTMLResponse(status_code=404)
-        except ClientError as error_message:
-            error_code = error_message.response.get("Error", {}).get("Code")
-            if error_code in ["404", "NoSuchKey"]:
-                response_status = 404
-                error_text = f"File not found '{filename}'"
-            else:
-                error_text = f"ClientError pulling image for thumbnail '{filename}': {error_message}"
-                print(error_text, file=sys.stderr)
-                response_status = 500
-                if "ResponseMetadata" in error_message.response:
-                    if "HTTPStatusCode" in error_message.response["ResponseMetadata"]:
-                        response_status = error_message.response["ResponseMetadata"][
-                            "HTTPStatusCode"
-                        ]
-            return HTMLResponse(error_text, status_code=response_status)
-    thumbnail_data = generate_thumbnail(content)
-
-    # save the thunbnail to s3
-    async with get_aioboto3_session(meme_config).client(
-        "s3",
-        endpoint_url=meme_config.endpoint_url,
-    ) as s3_client:
-        await save_thumbnail(s3_client, filename, thumbnail_data.reader)
-    thumbnail_data.reader.seek(0)
-
-    imghash = thumbnail_data.hash
-    headers = {
-        "ETag": f'W/"{imghash}"',
-        "Cache-Control": "max-age=86400",
-    }
-    return StreamingResponse(
-        content=thumbnail_data.reader, media_type="image/jpeg", headers=headers
-    )
+async def get_thumbnail(filename: str) -> Response:
+    """Serve local thumbnails, refreshing stale entries in the background."""
+    cache: ThumbnailCache = app.state.thumbnail_cache
+    result = await cache.get(filename)
+    if isinstance(result, ThumbnailFailure):
+        match result.kind:
+            case FailureKind.MISSING:
+                return HTMLResponse(f"File not found '{filename}'", status_code=404)
+            case FailureKind.STORAGE | FailureKind.INVALID_IMAGE:
+                return HTMLResponse("Thumbnail unavailable", status_code=503)
+    return cache.response(result)
 
 
 @app.get("/image_info/{filename}", response_model=None)
@@ -253,7 +180,7 @@ async def get_image_info(filename: str) -> HTMLResponse:
                 status_code = 404
                 error_text = f"File not found '{filename}'"
             else:
-                logging.error(
+                LOGGER.error(
                     "error accessing bucket=%s key=%s url=/image_info/%s - %s %s",
                     meme_config.bucket,
                     filename,
@@ -290,7 +217,7 @@ async def get_image_info(filename: str) -> HTMLResponse:
 
 
 @app.get("/image/{filename}", response_model=None)
-async def get_image(filename: str) -> Union[HTMLResponse, StreamingResponse]:
+async def get_image(filename: str) -> Response:
     """returns an image"""
     session = get_aioboto3_session(meme_config)
 
@@ -313,25 +240,29 @@ async def get_image(filename: str) -> Union[HTMLResponse, StreamingResponse]:
                 response_status = 500
                 error_text = f"ClientError pulling '{filename}': {error_message}"
                 print(error_text, file=sys.stderr)
-                if "ResponseMetadata" in error_message.response:
-                    if "HTTPStatusCode" in error_message.response["ResponseMetadata"]:
-                        response_status = error_message.response["ResponseMetadata"][
-                            "HTTPStatusCode"
-                        ]
+                if (
+                    "ResponseMetadata" in error_message.response
+                    and "HTTPStatusCode" in error_message.response["ResponseMetadata"]
+                ):
+                    response_status = error_message.response["ResponseMetadata"][
+                        "HTTPStatusCode"
+                    ]
             return HTMLResponse(error_text, status_code=response_status)
     headers = {
-        "content_type": ob_info["content-type"],
-        "content_length": ob_info["content-length"],
+        "Cache-Control": "public, max-age=86400",
+        "Content-Length": str(len(content)),
     }
-    return StreamingResponse(BytesIO(content), headers=headers)
+    if "etag" in ob_info:
+        headers["ETag"] = ob_info["etag"]
+    return Response(content, media_type=ob_info["content-type"], headers=headers)
 
 
 @app.get("/static/js/{filename}", response_model=None)
-async def get_js_by_filename(filename: str) -> Union[FileResponse, HTMLResponse]:
+async def get_js_by_filename(filename: str) -> FileResponse | HTMLResponse:
     """return a js file"""
     filepath = Path(f"{os.path.dirname(__file__)}/js/{filename}").resolve()
     if not filepath.exists() or not filepath.is_file():
-        logging.debug(
+        LOGGER.debug(
             "Can't find %s in /static/js/%s request", filepath.as_posix(), filename
         )
         return HTMLResponse(status_code=404)
@@ -351,7 +282,7 @@ async def get_js_by_filename(filename: str) -> Union[FileResponse, HTMLResponse]
 
 
 @app.get("/static/css/{filename}", response_model=None)
-async def get_css_by_filename(filename: str) -> Union[FileResponse, HTMLResponse]:
+async def get_css_by_filename(filename: str) -> FileResponse | HTMLResponse:
     """return the css file"""
     filepath = Path(f"{os.path.dirname(__file__)}/css/{filename}").resolve()
     if not filepath.resolve().is_file() or not filepath.exists():
@@ -374,7 +305,7 @@ async def get_css_by_filename(filename: str) -> Union[FileResponse, HTMLResponse
 @app.get("/static/images/{filename}", response_model=None)
 async def get_static_image_by_filename(
     filename: str,
-) -> Union[FileResponse, HTMLResponse]:
+) -> FileResponse | HTMLResponse:
     """return the filename file"""
     filepath = Path(f"{os.path.dirname(__file__)}/images/{filename}").resolve()
     if not filepath.resolve().is_file() or not filepath.exists():
@@ -441,7 +372,7 @@ def cli(
     proxy_headers: bool = False,
     reload: bool = False,
     debug: bool = False,
-    config: Optional[str] = None,
+    config: str | None = None,
 ) -> None:
     """server"""
     if debug:
@@ -449,9 +380,9 @@ def cli(
     else:
         setup_logging(logging.INFO)
 
-    logging.debug("proxy_headers=%s", proxy_headers)
-    logging.debug("reload=%s", reload)
-    logging.debug("debug=%s", debug)
+    LOGGER.debug("proxy_headers=%s", proxy_headers)
+    LOGGER.debug("reload=%s", reload)
+    LOGGER.debug("debug=%s", debug)
     if config is not None:
         meme_config.load_from_file(Path(config))
     uvicorn_args = {

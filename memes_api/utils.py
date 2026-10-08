@@ -1,11 +1,11 @@
 """utility functions"""
 
-from json import dumps as json_dumps
-from io import BytesIO
 import sys
-from typing import Any, Optional, TypedDict
+from io import BytesIO
+from json import dumps as json_dumps
+from typing import Any, TypedDict
 
-from .config import meme_config_load
+from .config import MemeConfig, meme_config_load
 from .constants import THUMBNAIL_BUCKET_PREFIX
 
 
@@ -16,9 +16,9 @@ class DefaultPageRenderContext(TypedDict):
     page_description: str
     enable_search: bool
     baseurl: str
-    og_image: Optional[str]
-    image: Optional[str]
-    image_url: Optional[str]
+    og_image: str | None
+    image: str | None
+    image_url: str | None
 
 
 def default_page_render_context() -> DefaultPageRenderContext:
@@ -39,14 +39,19 @@ async def save_thumbnail(
     s3_client: Any,
     filename: str,
     content: BytesIO,
+    config: MemeConfig,
 ) -> bool:
     """saves the thumbnail back to s3"""
-    meme_config = meme_config_load()
+    meme_config = config
     try:
         await s3_client.upload_fileobj(
             content,
             meme_config.bucket,
             f"{THUMBNAIL_BUCKET_PREFIX}{filename}",
+            ExtraArgs={
+                "ContentType": "image/jpeg",
+                "CacheControl": "public, max-age=86400",
+            },
         )
         print(
             json_dumps(
@@ -59,7 +64,7 @@ async def save_thumbnail(
             ),
             file=sys.stderr,
         )
-    except Exception as upload_error:  # pylint: disable=broad-except
+    except Exception as upload_error:  # noqa: BLE001
         print(
             json_dumps(
                 {

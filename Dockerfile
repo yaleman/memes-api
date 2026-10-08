@@ -1,4 +1,4 @@
-FROM python:3.13-slim
+FROM python:3.14-slim
 
 WORKDIR /code
 
@@ -16,6 +16,8 @@ RUN adduser --disabled-password --gecos "" --home /home/memes memes
 
 # allow xff from anywhere, because we're in docker
 ENV FORWARDED_ALLOW_IPS="*"
+
+RUN mkdir -p /home/memes/.cache/memes-api/thumbnails && chown -R memes:memes /home/memes/.cache
 
 USER memes
 

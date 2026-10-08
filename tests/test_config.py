@@ -1,5 +1,7 @@
 import re
+
 import pytest
+
 from memes_api.config import MemeConfig, meme_config_load
 
 
@@ -18,6 +20,7 @@ def test_meme_config_load() -> None:
     # Monkeypatch the CONFIG_FILES to contain a non-existent file
     print("testing monkeypatch'd config_files to show a FileNotFoundError")
     monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.delenv("MEMES_API_CONFIG", raising=False)
     monkeypatch.setattr("memes_api.config.CONFIG_FILES", ["asdfsdfadf"])
     with pytest.raises(
         FileNotFoundError, match=re.escape("Couldn't find config at ['asdfsdfadf']")

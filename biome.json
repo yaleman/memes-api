@@ -1,0 +1,48 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "files": {
+    "includes": [
+      "memes_api/js/**/*.js",
+      "memes_api/css/**/*.css",
+      "!!.venv/",
+      "!!**/pico.min.css"
+    ]
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended"
+    }
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "javascript": {
+    "formatter": {
+      "lineWidth": 80,
+      "expand": "always"
+    }
+  },
+  "json": {
+    "formatter": {
+      "lineWidth": 80,
+      "expand": "always",
+      "trailingNewline": false
+    }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "*.vue"
+      ],
+      "linter": {
+        "enabled": true
+      },
+      "formatter": {
+        "enabled": true
+      }
+    }
+  ]
+}
