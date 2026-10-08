@@ -40,3 +40,7 @@ run = "find $(pwd) -name '*.sh' -exec shellcheck {} +"
 
 [tasks.coverage]
 run = ["uv run coverage run -m pytest", "uv run coverage html"]
+
+
+[tasks.publish]
+run = "publish.sh"
