@@ -1,9 +1,8 @@
-""" does the healthcheck, doesn't need curl """
+"""does the healthcheck, doesn't need curl"""
 
 import sys
-
-import urllib.request
 import urllib.error
+import urllib.request
 
 import click
 

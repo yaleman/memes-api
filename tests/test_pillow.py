@@ -1,8 +1,8 @@
-""" test image things """
+"""test image things"""
 
 from pathlib import Path
 
-from memes_api import generate_thumbnail
+from memes_api.thumbnails import generate_thumbnail
 
 
 def test_image_thumbnail() -> None:
@@ -19,4 +19,4 @@ def test_image_thumbnail() -> None:
 
     thumbnail = generate_thumbnail(image_content)
 
-    assert len(thumbnail.reader.read()) >= 4096
+    assert len(thumbnail) >= 4096

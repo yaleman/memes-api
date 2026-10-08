@@ -16,5 +16,9 @@ services:
       - "127.0.0.1:9000:9000"
     volumes:
       - "${HOME}/.config/memes-api.json:/home/memes/.config/memes-api.json"
+      - "thumbnail_cache:/home/memes/.cache/memes-api/thumbnails"
     # start automatically on daemon/host restart unless explicitly stopped
     restart: unless-stopped
+
+volumes:
+  thumbnail_cache:

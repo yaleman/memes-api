@@ -1,7 +1,7 @@
 """config things"""
 
+import os
 from functools import lru_cache
-from typing import Optional
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -15,7 +15,8 @@ class MemeConfig(BaseModel):
     aws_region: str
     bucket: str
     baseurl: str
-    endpoint_url: Optional[str]
+    endpoint_url: str | None
+    thumbnail_cache_dir: Path = Path("~/.cache/memes-api/thumbnails")
 
     def load_from_file(self, filepath: Path) -> None:
         """load from a file"""
@@ -26,7 +27,7 @@ class MemeConfig(BaseModel):
     @classmethod
     def default(cls) -> "MemeConfig":
         """Load config from the default locations"""
-        for testpath in CONFIG_FILES:
+        for testpath in config_files():
             filepath = Path(testpath).expanduser().resolve()
             if filepath.exists():
                 return MemeConfig.model_validate_json(
@@ -42,9 +43,15 @@ CONFIG_FILES = [
 ]
 
 
-@lru_cache()
+def config_files() -> list[str]:
+    """Allow explicit configuration without relying on the working directory."""
+    explicit = os.environ.get("MEMES_API_CONFIG")
+    return [explicit] if explicit else CONFIG_FILES
+
+
+@lru_cache
 def meme_config_load(
-    filepath: Optional[Path] = None,
+    filepath: Path | None = None,
 ) -> MemeConfig:
     """Config loader, returns a pydantic object, will try the following in order, returning the result of parsing the first one found.
 
@@ -59,7 +66,7 @@ def meme_config_load(
         if filepath.exists():
             return MemeConfig.model_validate_json(filepath.read_text(encoding="utf-8"))
         raise FileNotFoundError(f"Couldn't find config at {filepath}")
-    for testpath in CONFIG_FILES:
+    for testpath in config_files():
         filepath = Path(testpath).expanduser().resolve()
         if filepath.exists():
             return MemeConfig.model_validate_json(filepath.read_text(encoding="utf-8"))

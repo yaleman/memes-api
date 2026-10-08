@@ -1,0 +1,42 @@
+[tools]
+biome = "2.5.14"
+python = "3.14"
+shellcheck = "latest"
+uv = "latest"
+
+[tasks.fmt]
+run = "uv run ruff format"
+
+[tasks.ruff]
+depends = ["fmt"]
+run = "uv run ruff check --fix"
+
+[tasks.ty]
+depends = ["fmt"]
+run = "uv run ty check --fix"
+
+[tasks.pytest]
+depends = ["fmt"]
+run = "uv run pytest"
+
+[tasks.biome]
+run = "biome check --verbose"
+
+[tasks.docker_build]
+run = "docker build -t 'ghcr.io/yaleman/memes-api:latest' ."
+
+[tasks.docker_run]
+depends = ["docker_build"]
+run = """docker run --rm -it \
+        -p 8000:8000 \
+        --env-file .envrc" \
+        'ghcr.io/yaleman/memes-api:latest'"""
+
+[tasks.check]
+depends = ["ruff", "ty", "pytest", "biome"]
+
+[tasks.shellcheck]
+run = "find $(pwd) -name '*.sh' -exec shellcheck {} +"
+
+[tasks.coverage]
+run = ["uv run coverage run -m pytest", "uv run coverage html"]

@@ -2,20 +2,19 @@
 
 import asyncio
 import sys
-from typing import List
 
-import aioboto3  # type: ignore
-from botocore.exceptions import ClientError
+import aioboto3
 import click
+from botocore.exceptions import ClientError
 
-from .config import meme_config_load, MemeConfig
+from .config import MemeConfig, meme_config_load
 from .constants import THUMBNAIL_BUCKET_PREFIX
 
 
 async def get_image_list(
     meme_config: MemeConfig,
     session: aioboto3.Session,
-) -> List[str]:
+) -> list[str]:
     """pulls the list of images"""
     if meme_config.endpoint_url is not None:
         async with session.resource(
@@ -60,7 +59,7 @@ async def rename_image(
             sys.exit(1)
         except ClientError as failed:
             if hasattr(failed, "response"):
-                response = getattr(failed, "response")
+                response = failed.response
                 if "Error" in response:
                     error = response["Error"]
                     if error["Code"] != "404":
