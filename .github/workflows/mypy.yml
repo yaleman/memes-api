@@ -13,6 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v5.2.1
+      - uses: jdx/mise-action@v5.2.4
       - name: Running type checking
         run: mise run ty
